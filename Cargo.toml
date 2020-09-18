@@ -22,18 +22,18 @@ edition = "2018"
 ################################# Dependencies ################################
 
 [dependencies]
-algebra-core = { git = "https://github.com/scripr-lab/zexe",  default-features = false, features = [ "derive" ] }
-bench-utils = { git = "https://github.com/scripr-lab/zexe", }
-ff-fft = { git = "https://github.com/scripr-lab/zexe", default-features = false }
-r1cs-core = { git = "https://github.com/scripr-lab/zexe", default-features = false }
+algebra-core = { git = "https://github.com/scipr-lab/zexe",  default-features = false, features = [ "derive" ] }
+bench-utils = { git = "https://github.com/scipr-lab/zexe" }
+ff-fft = { git = "https://github.com/scipr-lab/zexe", default-features = false }
+r1cs-core = { git = "https://github.com/scipr-lab/zexe", default-features = false }
 rand = { version = "0.7", default-features = false }
 rayon = { version = "1", optional = true }
 
 [dev-dependencies]
 csv = { version = "1" }
-algebra = { git = "https://github.com/scripr-lab/zexe", default-features = false, features = [ "bls12_377", "bls12_381", "cp6_782", "mnt6_298", "mnt4_298" ] }
-r1cs-std = { git = "https://github.com/scripr-lab/zexe", default-features = false, features = [ "mnt6_298", "mnt4_298" ] }
-crypto-primitives = { git = "https://github.com/scripr-lab/zexe", default-features = false, features = [ "gm17", "r1cs" ] }
+algebra = { git = "https://github.com/scipr-lab/zexe", default-features = false, features = [ "bls12_377", "bls12_381", "cp6_782", "mnt6_298", "mnt4_298" ] }
+r1cs-std = { git = "https://github.com/scipr-lab/zexe", default-features = false, features = [ "mnt6_298", "mnt4_298" ] }
+crypto-primitives = { git = "https://github.com/scipr-lab/zexe", default-features = false, features = [ "gm17", "r1cs" ] }
 
 [features]
 default = ["parallel"]
