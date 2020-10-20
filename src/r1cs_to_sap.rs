@@ -1,11 +1,11 @@
-use algebra_core::{Field, One, PairingEngine, Zero};
-use ff_fft::{cfg_chunks_mut, cfg_iter, cfg_iter_mut, EvaluationDomain};
+use ark_ec::PairingEngine;
+use ark_ff::{Field, One, Zero};
+use ark_poly::EvaluationDomain;
+use ark_std::{cfg_chunks_mut, cfg_iter, cfg_iter_mut, vec, vec::Vec};
 
-use crate::Vec;
+use ark_relations::r1cs::{ConstraintSystemRef, SynthesisError};
 use core::ops::Deref;
-use r1cs_core::{ConstraintSystemRef, SynthesisError};
 
-use core::ops::{AddAssign, SubAssign};
 #[cfg(feature = "parallel")]
 use rayon::prelude::*;
 
@@ -73,7 +73,7 @@ impl R1CStoSAP {
             let t_four = u[extra_constr_offset + 2 * i - 1].double().double();
 
             c[i] += &t_four;
-            c[extra_var_offset2 + i].add_assign(&u[extra_constr_offset + 2 * i - 1]);
+            c[extra_var_offset2 + i] += &u[extra_constr_offset + 2 * i - 1];
 
             // Second extra constraint
 
@@ -161,9 +161,9 @@ impl R1CStoSAP {
         let d1_double = d1.double();
         let mut h: Vec<E::Fr> = vec![d1_double; domain_size];
         cfg_iter_mut!(h).zip(&a).for_each(|(h_i, a_i)| *h_i *= a_i);
-        h[0].sub_assign(&d2);
+        h[0] -= d2;
         let d1d1 = d1.square();
-        h[0].sub_assign(&d1d1);
+        h[0] -= &d1d1;
         h.push(d1d1);
 
         domain.coset_fft_in_place(&mut a);
@@ -206,7 +206,7 @@ impl R1CStoSAP {
 
         cfg_iter_mut!(h[..domain_size - 1])
             .enumerate()
-            .for_each(|(i, e)| e.add_assign(&aa[i]));
+            .for_each(|(i, e)| *e += &aa[i]);
 
         Ok((full_input_assignment, h, domain_size))
     }

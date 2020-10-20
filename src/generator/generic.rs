@@ -1,14 +1,14 @@
-use algebra_core::{
-    msm::FixedBaseMSM, Field, One, PairingEngine, PrimeField, ProjectiveCurve, UniformRand, Zero,
-};
-use ff_fft::{cfg_into_iter, cfg_iter, EvaluationDomain};
+use ark_ec::{msm::FixedBaseMSM, PairingEngine, ProjectiveCurve};
+use ark_ff::{Field, One, PrimeField, UniformRand, Zero};
+use ark_poly::EvaluationDomain;
+use ark_relations::r1cs::{ConstraintSynthesizer, ConstraintSystem, SynthesisError, SynthesisMode};
+use ark_std::{cfg_into_iter, cfg_iter, vec::Vec};
 
-use r1cs_core::{ConstraintSynthesizer, ConstraintSystem, SynthesisError};
 use rand::Rng;
 #[cfg(feature = "parallel")]
 use rayon::prelude::*;
 
-use crate::{r1cs_to_sap::R1CStoSAP, Parameters, Vec, VerifyingKey};
+use crate::{r1cs_to_sap::R1CStoSAP, Parameters, VerifyingKey};
 
 /// Generates a random common reference string for
 /// a circuit.
@@ -49,7 +49,7 @@ where
 {
     let setup_time = start_timer!(|| "GrothMaller17::Generator");
     let cs = ConstraintSystem::new_ref();
-    cs.set_mode(r1cs_core::SynthesisMode::Setup);
+    cs.set_mode(SynthesisMode::Setup);
 
     // Synthesize the circuit.
     let synthesis_time = start_timer!(|| "Constraint synthesis");
