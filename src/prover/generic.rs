@@ -2,14 +2,14 @@ use rand::Rng;
 #[cfg(feature = "parallel")]
 use rayon::prelude::*;
 
-use algebra_core::{
-    msm::VariableBaseMSM, AffineCurve, PairingEngine, PrimeField, ProjectiveCurve, UniformRand,
-};
+use ark_ec::{msm::VariableBaseMSM, AffineCurve, PairingEngine, ProjectiveCurve};
+use ark_ff::{PrimeField, UniformRand};
+use ark_poly::EvaluationDomain;
+use ark_std::{cfg_into_iter, vec::Vec};
 
-use crate::{r1cs_to_sap::R1CStoSAP, Parameters, Proof, Vec};
-use ff_fft::{cfg_into_iter, EvaluationDomain};
+use crate::{r1cs_to_sap::R1CStoSAP, Parameters, Proof};
 
-use r1cs_core::{ConstraintSynthesizer, ConstraintSystem, SynthesisError};
+use ark_relations::r1cs::{ConstraintSynthesizer, ConstraintSystem, SynthesisError};
 
 use core::ops::{AddAssign, MulAssign};
 

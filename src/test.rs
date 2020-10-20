@@ -1,5 +1,8 @@
-use algebra_core::{fields::Field, Zero};
-use r1cs_core::{lc, ConstraintSynthesizer, ConstraintSystemRef, SynthesisError};
+use ark_ff::{Field, Zero};
+use ark_relations::{
+    lc,
+    r1cs::{ConstraintSynthesizer, ConstraintSystemRef, SynthesisError},
+};
 
 struct MySillyCircuit<F: Field> {
     a: Option<F>,
@@ -37,9 +40,9 @@ mod bls12_377 {
     use crate::{
         create_random_proof, generate_random_parameters, prepare_verifying_key, verify_proof,
     };
-    use algebra_core::{test_rng, UniformRand};
+    use ark_ff::{test_rng, UniformRand};
 
-    use algebra::bls12_377::{Bls12_377, Fr};
+    use ark_bls12_377::{Bls12_377, Fr};
     use core::ops::MulAssign;
 
     #[test]
@@ -80,9 +83,9 @@ mod cp6_782 {
         create_random_proof, generate_random_parameters, prepare_verifying_key, verify_proof,
     };
 
-    use algebra_core::{test_rng, UniformRand};
+    use ark_ff::{test_rng, UniformRand};
 
-    use algebra::cp6_782::{Fr, CP6_782};
+    use ark_cp6_782::{Fr, CP6_782};
 
     #[test]
     fn prove_and_verify() {

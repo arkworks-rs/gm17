@@ -13,23 +13,15 @@
 #[macro_use]
 extern crate bench_utils;
 
-#[cfg(not(feature = "std"))]
-#[macro_use]
-extern crate alloc;
-
-#[cfg(not(feature = "std"))]
-use alloc::vec::Vec;
-
-#[cfg(feature = "std")]
-use std::vec::Vec;
-
-use algebra_core::{
-    bytes::ToBytes,
+use ark_ec::PairingEngine;
+use ark_ff::bytes::ToBytes;
+use ark_serialize::*;
+use ark_std::{
     io::{self, Result as IoResult},
-    serialize::*,
-    PairingEngine,
+    vec::Vec,
 };
-use r1cs_core::SynthesisError;
+
+use ark_relations::r1cs::SynthesisError;
 
 /// Reduce an R1CS instance to a *Square Arithmetic Program* instance.
 pub mod r1cs_to_sap;
