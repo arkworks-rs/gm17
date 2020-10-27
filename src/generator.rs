@@ -1,25 +1,24 @@
 use ark_ec::{msm::FixedBaseMSM, PairingEngine, ProjectiveCurve};
 use ark_ff::{Field, One, PrimeField, UniformRand, Zero};
-use ark_poly::EvaluationDomain;
-use ark_relations::r1cs::{ConstraintSynthesizer, ConstraintSystem, SynthesisError, SynthesisMode};
+use ark_poly::{EvaluationDomain, GeneralEvaluationDomain};
+use ark_relations::r1cs::{
+    ConstraintSynthesizer, ConstraintSystem, Result as R1CSResult, SynthesisError, SynthesisMode,
+};
 use ark_std::{cfg_into_iter, cfg_iter, vec::Vec};
 
 use rand::Rng;
 #[cfg(feature = "parallel")]
 use rayon::prelude::*;
 
-use crate::{r1cs_to_sap::R1CStoSAP, Parameters, VerifyingKey};
+use crate::{r1cs_to_sap::R1CStoSAP, ProvingKey, VerifyingKey};
 
 /// Generates a random common reference string for
 /// a circuit.
-pub fn generate_random_parameters<E, C, D, R>(
-    circuit: C,
-    rng: &mut R,
-) -> Result<Parameters<E>, SynthesisError>
+#[inline]
+pub fn generate_random_parameters<E, C, R>(circuit: C, rng: &mut R) -> R1CSResult<ProvingKey<E>>
 where
     E: PairingEngine,
     C: ConstraintSynthesizer<E::Fr>,
-    D: EvaluationDomain<E::Fr>,
     R: Rng,
 {
     let alpha = E::Fr::rand(rng);
@@ -28,11 +27,11 @@ where
     let g = E::G1Projective::rand(rng);
     let h = E::G2Projective::rand(rng);
 
-    generate_parameters::<E, C, D, R>(circuit, alpha, beta, gamma, g, h, rng)
+    generate_parameters::<E, C, R>(circuit, alpha, beta, gamma, g, h, rng)
 }
 
 /// Create parameters for a circuit, given some toxic waste.
-pub fn generate_parameters<E, C, D, R>(
+pub fn generate_parameters<E, C, R>(
     circuit: C,
     alpha: E::Fr,
     beta: E::Fr,
@@ -40,13 +39,14 @@ pub fn generate_parameters<E, C, D, R>(
     g: E::G1Projective,
     h: E::G2Projective,
     rng: &mut R,
-) -> Result<Parameters<E>, SynthesisError>
+) -> R1CSResult<ProvingKey<E>>
 where
     E: PairingEngine,
     C: ConstraintSynthesizer<E::Fr>,
-    D: EvaluationDomain<E::Fr>,
     R: Rng,
 {
+    type D<F> = GeneralEvaluationDomain<F>;
+
     let setup_time = start_timer!(|| "GrothMaller17::Generator");
     let cs = ConstraintSystem::new_ref();
     cs.set_mode(SynthesisMode::Setup);
@@ -75,7 +75,7 @@ where
 
     let reduction_time = start_timer!(|| "R1CS to SAP Instance Map with Evaluation");
     let (a, c, zt, sap_num_variables, m_raw) =
-        R1CStoSAP::instance_map_with_evaluation::<E, D>(cs.clone(), &t)?;
+        R1CStoSAP::instance_map_with_evaluation::<E::Fr, D<E::Fr>>(cs.clone(), &t)?;
     end_timer!(reduction_time);
     drop(cs);
 
@@ -107,7 +107,7 @@ where
 
     // Compute the A-query
     let a_time = start_timer!(|| "Calculate A");
-    let mut a_query = FixedBaseMSM::multi_scalar_mul::<E::G1Projective>(
+    let a_query = FixedBaseMSM::multi_scalar_mul::<E::G1Projective>(
         scalar_bits,
         g_window,
         &g_table,
@@ -129,7 +129,7 @@ where
 
     // Compute the vector G_gamma2_z_t := Z(t) * t^i * gamma^2 * G
     let gamma2_z_t = gamma_z * &gamma;
-    let mut g_gamma2_z_t = FixedBaseMSM::multi_scalar_mul::<E::G1Projective>(
+    let g_gamma2_z_t = FixedBaseMSM::multi_scalar_mul::<E::G1Projective>(
         scalar_bits,
         g_window,
         &g_table,
@@ -155,7 +155,7 @@ where
     // Compute the C_2-query
     let c2_time = start_timer!(|| "Calculate C2");
     let double_gamma2_z = (zt * &gamma.square()).double();
-    let mut c_query_2 = FixedBaseMSM::multi_scalar_mul::<E::G1Projective>(
+    let c_query_2 = FixedBaseMSM::multi_scalar_mul::<E::G1Projective>(
         scalar_bits,
         g_window,
         &g_table,
@@ -175,12 +175,13 @@ where
 
     // Compute the B-query
     let b_time = start_timer!(|| "Calculate B");
-    let mut b_query = FixedBaseMSM::multi_scalar_mul::<E::G2Projective>(
+    let b_query = FixedBaseMSM::multi_scalar_mul::<E::G2Projective>(
         scalar_bits,
         h_gamma_window,
         &h_gamma_table,
         &a,
     );
+    drop(h_gamma_table);
     end_timer!(b_time);
 
     end_timer!(proving_key_time);
@@ -197,33 +198,29 @@ where
         h_beta_g2: h_beta.into_affine(),
         g_gamma_g1: g_gamma.into_affine(),
         h_gamma_g2: h_gamma.into_affine(),
-        query: cfg_into_iter!(verifier_query)
-            .map(|e| e.into_affine())
-            .collect(),
+        query: E::G1Projective::batch_normalization_into_affine(&verifier_query),
     };
 
-    let mut c_query_1 = c_query_1.to_vec();
-
     let batch_normalization_time = start_timer!(|| "Convert proving key elements to affine");
-    E::G1Projective::batch_normalization(a_query.as_mut_slice());
-    E::G2Projective::batch_normalization(b_query.as_mut_slice());
-    E::G1Projective::batch_normalization(c_query_1.as_mut_slice());
-    E::G1Projective::batch_normalization(c_query_2.as_mut_slice());
-    E::G1Projective::batch_normalization(g_gamma2_z_t.as_mut_slice());
+    let a_query = E::G1Projective::batch_normalization_into_affine(&a_query);
+    let b_query = E::G2Projective::batch_normalization_into_affine(&b_query);
+    let c_query_1 = E::G1Projective::batch_normalization_into_affine(&c_query_1);
+    let c_query_2 = E::G1Projective::batch_normalization_into_affine(&c_query_2);
+    let g_gamma2_z_t = E::G1Projective::batch_normalization_into_affine(&g_gamma2_z_t);
     end_timer!(batch_normalization_time);
 
     end_timer!(setup_time);
 
-    Ok(Parameters {
+    Ok(ProvingKey {
         vk,
-        a_query: a_query.into_iter().map(Into::into).collect(),
-        b_query: b_query.into_iter().map(Into::into).collect(),
-        c_query_1: c_query_1.into_iter().map(Into::into).collect(),
-        c_query_2: c_query_2.into_iter().map(Into::into).collect(),
+        a_query,
+        b_query,
+        c_query_1,
+        c_query_2,
         g_gamma_z: g_gamma_z.into_affine(),
         h_gamma_z: h_gamma_z.into_affine(),
         g_ab_gamma_z: g_ab_gamma_z.into_affine(),
         g_gamma2_z2: g_gamma2_z2.into_affine(),
-        g_gamma2_z_t: g_gamma2_z_t.into_iter().map(Into::into).collect(),
+        g_gamma2_z_t,
     })
 }

@@ -1,12 +1,10 @@
 use ark_ec::{AffineCurve, PairingEngine, ProjectiveCurve};
 use ark_ff::One;
+use ark_relations::r1cs::{Result as R1CSResult, SynthesisError};
 
 use super::{PreparedVerifyingKey, Proof, VerifyingKey};
 
-use crate::SynthesisError;
-
-use core::ops::Neg;
-
+/// Prepare the verifying key `vk` for use in proof verification.
 pub fn prepare_verifying_key<E: PairingEngine>(vk: &VerifyingKey<E>) -> PreparedVerifyingKey<E> {
     PreparedVerifyingKey {
         vk: vk.clone(),
@@ -20,11 +18,13 @@ pub fn prepare_verifying_key<E: PairingEngine>(vk: &VerifyingKey<E>) -> Prepared
     }
 }
 
+/// Verify a GrothMaller17 proof `proof` against the prepared verification key `pvk`,
+/// with respect to the instance `public_inputs`.
 pub fn verify_proof<E: PairingEngine>(
     pvk: &PreparedVerifyingKey<E>,
     proof: &Proof<E>,
     public_inputs: &[E::Fr],
-) -> Result<bool, SynthesisError> {
+) -> R1CSResult<bool> {
     if (public_inputs.len() + 1) != pvk.query.len() {
         return Err(SynthesisError::MalformedVerifyingKey);
     }
@@ -48,7 +48,7 @@ pub fn verify_proof<E: PairingEngine>(
     let test1_r1 = pvk.g_alpha_h_beta_ml;
 
     let test1_r2_input: &[(E::G1Prepared, E::G2Prepared)] = &[
-        (test1_a_g_alpha.neg().into(), test1_b_h_beta.into()),
+        ((-test1_a_g_alpha).into(), test1_b_h_beta.into()),
         (g_psi.into().into(), pvk.h_gamma_pc.clone()),
         (proof.c.into(), pvk.h_pc.clone()),
     ];
@@ -59,7 +59,7 @@ pub fn verify_proof<E: PairingEngine>(
     // e(A, H^{gamma}) = e(G^{gamma}, B)
     let test2_exp_input: &[(E::G1Prepared, E::G2Prepared)] = &[
         (proof.a.into(), pvk.h_gamma_pc.clone()),
-        (pvk.g_gamma_pc.clone(), proof.b.neg().into()),
+        (pvk.g_gamma_pc.clone(), (-proof.b).into()),
     ];
 
     let test2_exp = E::miller_loop(test2_exp_input.iter());
