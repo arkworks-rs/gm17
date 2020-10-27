@@ -1,9 +1,8 @@
-use ark_ec::PairingEngine;
-use ark_ff::{Field, One, Zero};
+use ark_ff::{Field, PrimeField};
 use ark_poly::EvaluationDomain;
 use ark_std::{cfg_chunks_mut, cfg_iter, cfg_iter_mut, vec, vec::Vec};
 
-use ark_relations::r1cs::{ConstraintSystemRef, SynthesisError};
+use ark_relations::r1cs::{ConstraintSystemRef, Result as R1CSResult, SynthesisError};
 use core::ops::Deref;
 
 #[cfg(feature = "parallel")]
@@ -13,10 +12,10 @@ pub(crate) struct R1CStoSAP;
 
 impl R1CStoSAP {
     #[inline]
-    pub(crate) fn instance_map_with_evaluation<E: PairingEngine, D: EvaluationDomain<E::Fr>>(
-        cs: ConstraintSystemRef<E::Fr>,
-        t: &E::Fr,
-    ) -> Result<(Vec<E::Fr>, Vec<E::Fr>, E::Fr, usize, usize), SynthesisError> {
+    pub(crate) fn instance_map_with_evaluation<F: PrimeField, D: EvaluationDomain<F>>(
+        cs: ConstraintSystemRef<F>,
+        t: &F,
+    ) -> R1CSResult<(Vec<F>, Vec<F>, F, usize, usize)> {
         let matrices = cs.to_matrices().unwrap();
         let num_inputs = cs.num_instance_variables();
         let num_aux = cs.num_witness_variables();
@@ -38,8 +37,8 @@ impl R1CStoSAP {
         let extra_constr_offset = 2 * num_constraints;
         let extra_var_offset2 = (num_inputs - 1) + num_aux + num_constraints;
 
-        let mut a = vec![E::Fr::zero(); sap_num_variables + 1];
-        let mut c = vec![E::Fr::zero(); sap_num_variables + 1];
+        let mut a = vec![F::zero(); sap_num_variables + 1];
+        let mut c = vec![F::zero(); sap_num_variables + 1];
 
         for i in 0..num_constraints {
             let u_2i = u[2 * i];
@@ -86,11 +85,11 @@ impl R1CStoSAP {
     }
 
     #[inline]
-    pub(crate) fn witness_map<E: PairingEngine, D: EvaluationDomain<E::Fr>>(
-        prover: ConstraintSystemRef<E::Fr>,
-        d1: &E::Fr,
-        d2: &E::Fr,
-    ) -> Result<(Vec<E::Fr>, Vec<E::Fr>, usize), SynthesisError> {
+    pub(crate) fn witness_map<F: PrimeField, D: EvaluationDomain<F>>(
+        prover: ConstraintSystemRef<F>,
+        d1: &F,
+        d2: &F,
+    ) -> R1CSResult<(Vec<F>, Vec<F>, usize)> {
         #[inline]
         fn evaluate_constraint<F: Field>(terms: &[(F, usize)], assignment: &[F]) -> F {
             let mut acc = F::zero();
@@ -101,8 +100,8 @@ impl R1CStoSAP {
             acc
         }
 
-        let zero = E::Fr::zero();
-        let one = E::Fr::one();
+        let zero = F::zero();
+        let one = F::one();
         let matrices = prover.to_matrices().unwrap();
         let num_inputs = prover.num_instance_variables();
         let num_aux = prover.num_witness_variables();
@@ -159,7 +158,7 @@ impl R1CStoSAP {
         domain.ifft_in_place(&mut a);
 
         let d1_double = d1.double();
-        let mut h: Vec<E::Fr> = vec![d1_double; domain_size];
+        let mut h: Vec<F> = vec![d1_double; domain_size];
         cfg_iter_mut!(h).zip(&a).for_each(|(h_i, a_i)| *h_i *= a_i);
         h[0] -= d2;
         let d1d1 = d1.square();
