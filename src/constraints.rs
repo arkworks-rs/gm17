@@ -319,19 +319,22 @@ where
             let pvk = pvk.borrow();
             let g_alpha = P::G1Var::new_variable(
                 ark_relations::ns!(cs, "g_alpha"),
-                || Ok(pvk.g_alpha),
+                || Ok(pvk.g_alpha.clone()),
                 mode,
             )?;
-            let h_beta =
-                P::G2Var::new_variable(ark_relations::ns!(cs, "h_beta"), || Ok(pvk.h_beta), mode)?;
+            let h_beta = P::G2Var::new_variable(
+                ark_relations::ns!(cs, "h_beta"),
+                || Ok(pvk.h_beta.clone()),
+                mode,
+            )?;
             let g_alpha_pc = P::G1PreparedVar::new_variable(
                 ark_relations::ns!(cs, "g_alpha_pc"),
-                || Ok(pvk.g_alpha.into()),
+                || Ok(E::G1Prepared::from(pvk.g_alpha)),
                 mode,
             )?;
             let h_beta_pc = P::G2PreparedVar::new_variable(
                 ark_relations::ns!(cs, "h_beta_pc"),
-                || Ok(pvk.h_beta.into()),
+                || Ok(E::G2Prepared::from(pvk.h_beta)),
                 mode,
             )?;
             let g_gamma_pc = P::G1PreparedVar::new_variable(
