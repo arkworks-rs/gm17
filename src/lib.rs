@@ -16,6 +16,10 @@
 #[macro_use]
 extern crate bench_utils;
 
+#[cfg(feature = "r1cs")]
+#[macro_use]
+extern crate derivative;
+
 /// Reduce an R1CS instance to a *Square Arithmetic Program* instance.
 pub mod r1cs_to_sap;
 
@@ -31,15 +35,19 @@ pub mod prover;
 /// Verify proofs for the GM17 zkSNARK construction.
 pub mod verifier;
 
+/// Constraints for the GM17 verifier.
+#[cfg(feature = "r1cs")]
+pub mod constraints;
+
 #[cfg(test)]
 mod test;
 
 pub use self::data_structures::*;
 pub use self::{generator::*, prover::*, verifier::*};
 
+use ark_crypto_primitives::snark::{CircuitSpecificSetupSNARK, SNARK};
 use ark_ec::PairingEngine;
 use ark_relations::r1cs::{ConstraintSynthesizer, SynthesisError};
-use ark_snark::*;
 use ark_std::marker::PhantomData;
 use rand::RngCore;
 
