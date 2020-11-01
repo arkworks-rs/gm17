@@ -402,12 +402,12 @@ where
             )?;
             let g_gamma_g1 = P::G1Var::new_variable(
                 ark_relations::ns!(cs, "g_gamma"),
-                || Ok(&vk.g_gamma_g1),
+                || Ok(vk.g_gamma_g1),
                 mode,
             )?;
             let h_gamma_g2 = P::G2Var::new_variable(
                 ark_relations::ns!(cs, "h_gamma"),
-                || Ok(&vk.h_gamma_g2),
+                || Ok(vk.h_gamma_g2),
                 mode,
             )?;
             let query = Vec::new_variable(
