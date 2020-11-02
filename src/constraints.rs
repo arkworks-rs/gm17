@@ -27,7 +27,7 @@ pub struct ProofVar<E: PairingEngine, P: PairingVar<E>> {
     pub c: P::G1Var,
 }
 
-/// The verifying key variable for the GM17 construction
+///  variable representing the GM17 verifying key in the constraint system.
 #[derive(Derivative)]
 #[derivative(
     Clone(bound = "P::G1Var: Clone, P::GTVar: Clone, P::G1PreparedVar: Clone, \
@@ -49,7 +49,7 @@ pub struct VerifyingKeyVar<E: PairingEngine, P: PairingVar<E>> {
 }
 
 impl<E: PairingEngine, P: PairingVar<E>> VerifyingKeyVar<E, P> {
-    /// Prepare the verifying key `vk` for use in proof verification.
+    /// Prepare `self` for use in proof verification.
     pub fn prepare(&self) -> Result<PreparedVerifyingKeyVar<E, P>, SynthesisError> {
         let g_alpha_pc = P::prepare_g1(&self.g_alpha_g1)?;
         let h_beta_pc = P::prepare_g2(&self.h_beta_g2)?;
@@ -94,7 +94,7 @@ pub struct PreparedVerifyingKeyVar<E: PairingEngine, P: PairingVar<E>> {
     pub query: Vec<P::G1Var>,
 }
 
-/// The SNARK verifier gadget of [[GM17]](https://eprint.iacr.org/2016/260.pdf).
+/// Constraints for the verifier of the SNARK of [[GM17]](https://eprint.iacr.org/2017/540.pdf).
 pub struct GM17VerifierGadget<E, P>
 where
     E: PairingEngine,
@@ -375,7 +375,6 @@ where
 impl<E, P> AllocVar<VerifyingKey<E>, E::Fq> for VerifyingKeyVar<E, P>
 where
     E: PairingEngine,
-
     P: PairingVar<E>,
 {
     #[tracing::instrument(target = "r1cs", skip(cs, f))]
@@ -415,6 +414,7 @@ where
                 || Ok(vk.query.clone()),
                 mode,
             )?;
+
             Ok(Self {
                 h_g2,
                 g_alpha_g1,
@@ -515,8 +515,7 @@ mod test {
             })?;
 
             for _ in 0..(self.num_variables - 3) {
-                let _ =
-                    cs.new_witness_variable(|| self.a.ok_or(SynthesisError::AssignmentMissing))?;
+                cs.new_witness_variable(|| self.a.ok_or(SynthesisError::AssignmentMissing))?;
             }
 
             for _ in 0..self.num_constraints {
