@@ -4,7 +4,8 @@
 
 use ark_bls12_381::{Bls12_381, Fr as BlsFr};
 use ark_crypto_primitives::SNARK;
-use ark_ff::{PrimeField, UniformRand};
+use ark_ff::PrimeField;
+use ark_std::UniformRand;
 use ark_gm17::GM17;
 use ark_mnt4_298::{Fr as MNT4Fr, MNT4_298};
 use ark_mnt4_753::{Fr as MNT4BigFr, MNT4_753};
@@ -65,7 +66,7 @@ impl<F: PrimeField> ConstraintSynthesizer<F> for DummyCircuit<F> {
 
 macro_rules! gm17_prove_bench {
     ($bench_name:ident, $bench_field:ty, $bench_pairing_engine:ty) => {
-        let rng = &mut ark_ff::test_rng();
+        let rng = &mut ark_std::test_rng();
         let c = DummyCircuit::<$bench_field> {
             a: Some(<$bench_field>::rand(rng)),
             b: Some(<$bench_field>::rand(rng)),
@@ -91,7 +92,7 @@ macro_rules! gm17_prove_bench {
 
 macro_rules! gm17_verify_bench {
     ($bench_name:ident, $bench_field:ty, $bench_pairing_engine:ty) => {
-        let rng = &mut ark_ff::test_rng();
+        let rng = &mut ark_std::test_rng();
         let c = DummyCircuit::<$bench_field> {
             a: Some(<$bench_field>::rand(rng)),
             b: Some(<$bench_field>::rand(rng)),
