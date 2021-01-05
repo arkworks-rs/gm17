@@ -1,7 +1,10 @@
 use ark_ec::{msm::FixedBaseMSM, PairingEngine, ProjectiveCurve};
 use ark_ff::{Field, One, PrimeField, UniformRand, Zero};
 use ark_poly::{EvaluationDomain, GeneralEvaluationDomain};
-use ark_relations::r1cs::{ConstraintSynthesizer, ConstraintSystem, Result as R1CSResult, SynthesisError, SynthesisMode, OptimizationGoal};
+use ark_relations::r1cs::{
+    ConstraintSynthesizer, ConstraintSystem, OptimizationGoal, Result as R1CSResult,
+    SynthesisError, SynthesisMode,
+};
 use ark_std::{cfg_into_iter, cfg_iter, vec::Vec};
 
 use rand::Rng;

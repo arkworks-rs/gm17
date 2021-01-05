@@ -9,7 +9,9 @@ use ark_std::{cfg_into_iter, vec::Vec};
 
 use crate::{r1cs_to_sap::R1CStoSAP, Proof, ProvingKey};
 
-use ark_relations::r1cs::{ConstraintSynthesizer, ConstraintSystem, SynthesisError, OptimizationGoal};
+use ark_relations::r1cs::{
+    ConstraintSynthesizer, ConstraintSystem, OptimizationGoal, SynthesisError,
+};
 
 /// Create a zero-knowledge GrothMaller17 proof.
 #[inline]
