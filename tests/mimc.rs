@@ -26,10 +26,10 @@
 )]
 
 // For randomness (during paramgen and proof generation)
-use rand::Rng;
+use ark_std::rand::Rng;
 
 // For benchmarking
-use std::time::{Duration, Instant};
+use ark_std::time::{Duration, Instant};
 
 // Bring in some tools for using pairing-friendly curves
 // We're going to use the BLS12-377 pairing-friendly elliptic curve.
