@@ -2,11 +2,12 @@ use ark_ec::{msm::FixedBaseMSM, PairingEngine, ProjectiveCurve};
 use ark_ff::{Field, One, PrimeField, UniformRand, Zero};
 use ark_poly::{EvaluationDomain, GeneralEvaluationDomain};
 use ark_relations::r1cs::{
-    ConstraintSynthesizer, ConstraintSystem, Result as R1CSResult, SynthesisError, SynthesisMode,
+    ConstraintSynthesizer, ConstraintSystem, OptimizationGoal, Result as R1CSResult,
+    SynthesisError, SynthesisMode,
 };
 use ark_std::{cfg_into_iter, cfg_iter, vec::Vec};
 
-use rand::Rng;
+use ark_std::rand::Rng;
 #[cfg(feature = "parallel")]
 use rayon::prelude::*;
 
@@ -49,6 +50,7 @@ where
 
     let setup_time = start_timer!(|| "GrothMaller17::Generator");
     let cs = ConstraintSystem::new_ref();
+    cs.set_optimization_goal(OptimizationGoal::Constraints);
     cs.set_mode(SynthesisMode::Setup);
 
     // Synthesize the circuit.
@@ -57,7 +59,7 @@ where
     end_timer!(synthesis_time);
 
     let lc_time = start_timer!(|| "Inlining LCs");
-    cs.inline_all_lcs();
+    cs.finalize();
     end_timer!(lc_time);
 
     let num_inputs = cs.num_instance_variables();

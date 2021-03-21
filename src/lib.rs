@@ -49,7 +49,7 @@ use ark_crypto_primitives::snark::{CircuitSpecificSetupSNARK, SNARK};
 use ark_ec::PairingEngine;
 use ark_relations::r1cs::{ConstraintSynthesizer, SynthesisError};
 use ark_std::marker::PhantomData;
-use rand::RngCore;
+use ark_std::rand::RngCore;
 
 /// The SNARK of [[GrothMaller17]](https://eprint.iacr.org/2017/540).
 pub struct GM17<E: PairingEngine> {

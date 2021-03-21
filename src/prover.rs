@@ -1,4 +1,4 @@
-use rand::Rng;
+use ark_std::rand::Rng;
 #[cfg(feature = "parallel")]
 use rayon::prelude::*;
 
@@ -9,7 +9,9 @@ use ark_std::{cfg_into_iter, vec::Vec};
 
 use crate::{r1cs_to_sap::R1CStoSAP, Proof, ProvingKey};
 
-use ark_relations::r1cs::{ConstraintSynthesizer, ConstraintSystem, SynthesisError};
+use ark_relations::r1cs::{
+    ConstraintSynthesizer, ConstraintSystem, OptimizationGoal, SynthesisError,
+};
 
 /// Create a zero-knowledge GrothMaller17 proof.
 #[inline]
@@ -47,13 +49,16 @@ where
     let prover_time = start_timer!(|| "GrothMaller17::Prover");
     let cs = ConstraintSystem::new_ref();
 
+    // Set the optimization goal
+    cs.set_optimization_goal(OptimizationGoal::Constraints);
+
     // Synthesize the circuit.
     let synthesis_time = start_timer!(|| "Constraint synthesis");
     circuit.generate_constraints(cs.clone())?;
     end_timer!(synthesis_time);
 
     let lc_time = start_timer!(|| "Inlining LCs");
-    cs.inline_all_lcs();
+    cs.finalize();
     end_timer!(lc_time);
 
     let witness_map_time = start_timer!(|| "R1CS to SAP witness map");
