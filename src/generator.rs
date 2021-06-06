@@ -122,12 +122,12 @@ where
     let gamma_z = zt * &gamma;
     let alpha_beta = alpha + &beta;
     let ab_gamma_z = alpha_beta * &gamma * &zt;
-    let g_gamma = g.mul(gamma.into());
-    let g_gamma_z = g.mul(gamma_z.into());
-    let h_gamma = h.mul(gamma.into());
-    let h_gamma_z = h_gamma.mul(zt.into());
-    let g_ab_gamma_z = g.mul(ab_gamma_z.into());
-    let g_gamma2_z2 = g.mul(gamma_z.square().into());
+    let g_gamma = g.mul(&gamma.into_repr());
+    let g_gamma_z = g.mul(&gamma_z.into_repr());
+    let h_gamma = h.mul(&gamma.into_repr());
+    let h_gamma_z = h_gamma.mul(&zt.into_repr());
+    let g_ab_gamma_z = g.mul(&ab_gamma_z.into_repr());
+    let g_gamma2_z2 = g.mul(&gamma_z.square().into_repr());
 
     // Compute the vector G_gamma2_z_t := Z(t) * t^i * gamma^2 * G
     let gamma2_z_t = gamma_z * &gamma;
@@ -190,8 +190,8 @@ where
 
     // Generate R1CS verification key
     let verifying_key_time = start_timer!(|| "Generate the R1CS verification key");
-    let g_alpha = g.mul(alpha.into());
-    let h_beta = h.mul(beta.into());
+    let g_alpha = g.mul(&alpha.into_repr());
+    let h_beta = h.mul(&beta.into_repr());
     end_timer!(verifying_key_time);
 
     let vk = VerifyingKey::<E> {
