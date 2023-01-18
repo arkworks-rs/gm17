@@ -31,7 +31,7 @@ rayon = { version = "1", optional = true }
 
 [dev-dependencies]
 csv = { version = "1" }
-ark-bls12-381 = { version = "^0.3.0", default-features = false, features = ["curve"] }
+ark-bls12-381 = { version = "^0.4.0", default-features = false, features = ["curve"] }
 ark-bls12-377 = { version = "^0.3.0", default-features = false, features = ["curve"] }
 ark-cp6-782 = { version = "^0.3.0", default-features = false }
 ark-mnt4-298 = { version = "^0.3.0", default-features = false, features = ["r1cs", "curve"] }
