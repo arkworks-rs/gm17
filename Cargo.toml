@@ -37,7 +37,7 @@ ark-cp6-782 = { version = "^0.3.0", default-features = false }
 ark-mnt4-298 = { version = "^0.3.0", default-features = false, features = ["r1cs", "curve"] }
 ark-mnt6-298 = { version = "^0.3.0", default-features = false, features = ["r1cs"] }
 ark-mnt4-753 = { version = "^0.3.0", default-features = false, features = ["r1cs", "curve"] }
-ark-mnt6-753 = { version = "^0.3.0", default-features = false, features = ["r1cs"] }
+ark-mnt6-753 = { version = "^0.4.0", default-features = false, features = ["r1cs"] }
 
 [features]
 default = ["parallel"]
