@@ -2,7 +2,6 @@ use ark_ec::pairing::Pairing;
 use ark_serialize::CanonicalSerialize;
 use ark_serialize::*;
 use ark_std::{
-    io::{self, Result as IoResult},
     vec::Vec,
 };
 
@@ -15,15 +14,6 @@ pub struct Proof<E: Pairing> {
     pub b: E::G2Affine,
     #[doc(hidden)]
     pub c: E::G1Affine,
-}
-
-impl<E: Pairing> ToBytes for Proof<E> {
-    #[inline]
-    fn write<W: Write>(&self, mut writer: W) -> io::Result<()> {
-        self.a.write(&mut writer)?;
-        self.b.write(&mut writer)?;
-        self.c.write(&mut writer)
-    }
 }
 
 /// A verification key in the GM17 SNARK.
@@ -43,20 +33,6 @@ pub struct VerifyingKey<E: Pairing> {
     pub query: Vec<E::G1Affine>,
 }
 
-impl<E: Pairing> ToBytes for VerifyingKey<E> {
-    fn write<W: Write>(&self, mut writer: W) -> IoResult<()> {
-        self.h_g2.write(&mut writer)?;
-        self.g_alpha_g1.write(&mut writer)?;
-        self.h_beta_g2.write(&mut writer)?;
-        self.g_gamma_g1.write(&mut writer)?;
-        self.h_gamma_g2.write(&mut writer)?;
-        for q in &self.query {
-            q.write(&mut writer)?;
-        }
-        Ok(())
-    }
-}
-
 impl<E: Pairing> Default for VerifyingKey<E> {
     fn default() -> Self {
         Self {
@@ -72,7 +48,7 @@ impl<E: Pairing> Default for VerifyingKey<E> {
 
 /// Preprocessed verification key parameters that enable faster verification
 /// at the expense of larger size in memory.
-#[derive(PartialEq, Eq, Clone)]
+#[derive(PartialEq, Eq, Clone, CanonicalDeserialize, CanonicalSerialize)]
 pub struct PreparedVerifyingKey<E: Pairing> {
     #[doc(hidden)]
     pub vk: VerifyingKey<E>,
@@ -81,7 +57,7 @@ pub struct PreparedVerifyingKey<E: Pairing> {
     #[doc(hidden)]
     pub h_beta: E::G2Affine,
     #[doc(hidden)]
-    pub g_alpha_h_beta_ml: E::Fqk,
+    pub g_alpha_h_beta_ml: E::TargetField,
     #[doc(hidden)]
     pub g_gamma_pc: E::G1Prepared,
     #[doc(hidden)]
@@ -98,7 +74,7 @@ impl<E: Pairing> Default for PreparedVerifyingKey<E> {
             vk: VerifyingKey::default(),
             g_alpha: E::G1Affine::default(),
             h_beta: E::G2Affine::default(),
-            g_alpha_h_beta_ml: E::Fqk::default(),
+            g_alpha_h_beta_ml: E::TargetField::default(),
             g_gamma_pc: E::G1Prepared::default(),
             h_gamma_pc: E::G2Prepared::default(),
             h_pc: E::G2Prepared::default(),
@@ -116,22 +92,6 @@ impl<E: Pairing> From<PreparedVerifyingKey<E>> for VerifyingKey<E> {
 impl<E: Pairing> From<VerifyingKey<E>> for PreparedVerifyingKey<E> {
     fn from(other: VerifyingKey<E>) -> Self {
         crate::prepare_verifying_key(&other)
-    }
-}
-
-impl<E: Pairing> ToBytes for PreparedVerifyingKey<E> {
-    fn write<W: Write>(&self, mut writer: W) -> IoResult<()> {
-        self.vk.write(&mut writer)?;
-        self.g_alpha.write(&mut writer)?;
-        self.h_beta.write(&mut writer)?;
-        self.g_alpha_h_beta_ml.write(&mut writer)?;
-        self.g_gamma_pc.write(&mut writer)?;
-        self.h_gamma_pc.write(&mut writer)?;
-        self.h_pc.write(&mut writer)?;
-        for q in &self.query {
-            q.write(&mut writer)?;
-        }
-        Ok(())
     }
 }
 
