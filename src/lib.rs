@@ -46,17 +46,17 @@ pub use self::data_structures::*;
 pub use self::{generator::*, prover::*, verifier::*};
 
 use ark_crypto_primitives::snark::{CircuitSpecificSetupSNARK, SNARK};
-use ark_ec::PairingEngine;
+use ark_ec::pairing::Pairing;
 use ark_relations::r1cs::{ConstraintSynthesizer, SynthesisError};
 use ark_std::marker::PhantomData;
 use ark_std::rand::RngCore;
 
 /// The SNARK of [[GrothMaller17]](https://eprint.iacr.org/2017/540).
-pub struct GM17<E: PairingEngine> {
+pub struct GM17<E: Pairing> {
     e_phantom: PhantomData<E>,
 }
 
-impl<E: PairingEngine> SNARK<E::Fr> for GM17<E> {
+impl<E: Pairing> SNARK<E::Fr> for GM17<E> {
     type ProvingKey = ProvingKey<E>;
     type VerifyingKey = VerifyingKey<E>;
     type Proof = Proof<E>;
@@ -96,4 +96,4 @@ impl<E: PairingEngine> SNARK<E::Fr> for GM17<E> {
     }
 }
 
-impl<E: PairingEngine> CircuitSpecificSetupSNARK<E::Fr> for GM17<E> {}
+impl<E: Pairing> CircuitSpecificSetupSNARK<E::Fr> for GM17<E> {}

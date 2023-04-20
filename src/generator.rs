@@ -1,4 +1,4 @@
-use ark_ec::{msm::FixedBaseMSM, PairingEngine, ProjectiveCurve};
+use ark_ec::{msm::FixedBaseMSM, pairing::Pairing, ProjectiveCurve};
 use ark_ff::{Field, One, PrimeField, UniformRand, Zero};
 use ark_poly::{EvaluationDomain, GeneralEvaluationDomain};
 use ark_relations::r1cs::{
@@ -18,7 +18,7 @@ use crate::{r1cs_to_sap::R1CStoSAP, ProvingKey, VerifyingKey};
 #[inline]
 pub fn generate_random_parameters<E, C, R>(circuit: C, rng: &mut R) -> R1CSResult<ProvingKey<E>>
 where
-    E: PairingEngine,
+    E: Pairing,
     C: ConstraintSynthesizer<E::Fr>,
     R: Rng,
 {
@@ -42,7 +42,7 @@ pub fn generate_parameters<E, C, R>(
     rng: &mut R,
 ) -> R1CSResult<ProvingKey<E>>
 where
-    E: PairingEngine,
+    E: Pairing,
     C: ConstraintSynthesizer<E::Fr>,
     R: Rng,
 {
