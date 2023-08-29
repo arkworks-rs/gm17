@@ -133,6 +133,8 @@ impl R1CStoSAP {
         let domain = D::new(2 * num_constraints + 2 * (num_inputs - 1) + 1)
             .ok_or(SynthesisError::PolynomialDegreeTooLarge)?;
         let domain_size = domain.size();
+        
+        let coset_domain = domain.get_coset(F::GENERATOR).unwrap();
 
         let extra_constr_offset = 2 * num_constraints;
         let extra_var_offset = num_inputs + num_aux;
@@ -165,7 +167,7 @@ impl R1CStoSAP {
         h[0] -= &d1d1;
         h.push(d1d1);
 
-        domain.coset_fft_in_place(&mut a);
+        coset_domain.fft_in_place(&mut a);
 
         let mut aa = domain.mul_polynomials_in_evaluation_domain(&a, &a);
         drop(a);
@@ -194,14 +196,18 @@ impl R1CStoSAP {
         }
 
         domain.ifft_in_place(&mut c);
-        domain.coset_fft_in_place(&mut c);
+        coset_domain.fft_in_place(&mut c);
 
         cfg_iter_mut!(aa)
             .zip(c)
             .for_each(|(aa_i, c_i)| *aa_i -= &c_i);
 
-        domain.divide_by_vanishing_poly_on_coset_in_place(&mut aa);
-        domain.coset_ifft_in_place(&mut aa);
+        let i = domain
+            .evaluate_vanishing_polynomial(F::GENERATOR)
+            .inverse()
+            .unwrap();
+        ark_std::cfg_iter_mut!(aa).for_each(|eval| *eval *= &i);
+        coset_domain.ifft_in_place(&mut aa);
 
         cfg_iter_mut!(h[..domain_size - 1])
             .enumerate()

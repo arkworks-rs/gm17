@@ -5,12 +5,12 @@ use ark_std::rand::Rng;
 #[cfg(feature = "parallel")]
 use rayon::prelude::*;
 
-use ark_ec::{CurveGroup, AffineRepr};
+use ark_ec::{CurveGroup, AffineRepr, ScalarMul};
 use ark_ec::scalar_mul::variable_base::VariableBaseMSM;
-use ark_ec::pairing::Pairing;
+use ark_ec::pairing::{Pairing, PairingOutput};
 use ark_ff::{UniformRand};
 use ark_poly::GeneralEvaluationDomain;
-use ark_std::{cfg_into_iter, vec::Vec};
+use ark_std::{cfg_into_iter, vec::Vec, Zero};
 
 use crate::{r1cs_to_sap::R1CStoSAP, Proof, ProvingKey};
 
@@ -96,8 +96,8 @@ where
     // Compute A
     let a_acc_time = start_timer!(|| "Compute A");
     let (a_inputs, a_aux) = params.a_query.split_at(num_inputs);
-    let a_inputs_acc = VariableBaseMSM::msm(&a_inputs[1..], &input_assignment);
-    let a_aux_acc = VariableBaseMSM::msm(a_aux, aux_assignment);
+    let a_inputs_acc = VariableBaseMSM::msm(&a_inputs[1..], &input_assignment).unwrap();
+    let a_aux_acc = VariableBaseMSM::msm(a_aux, aux_assignment).unwrap();
 
     let r_g = params.g_gamma_z.mul(r);
     let d1_g = params.g_gamma_z.mul(d1);
@@ -113,7 +113,7 @@ where
     let b_acc_time = start_timer!(|| "Compute B");
 
     let (b_inputs, b_aux) = params.b_query.split_at(num_inputs);
-    let b_inputs_acc = VariableBaseMSM::msm(&b_inputs[1..], &input_assignment);
+    let b_inputs_acc = VariableBaseMSM::msm(&b_inputs[1..], &input_assignment).unwrap();
     let b_aux_acc = VariableBaseMSM::msm(b_aux, aux_assignment).unwrap();
 
     let r_h = params.h_gamma_z.mul(r);
@@ -133,13 +133,13 @@ where
     let d1_r_2 = d1 * &r_2;
 
     let c1_acc_time = start_timer!(|| "Compute C1");
-    let c1_acc = VariableBaseMSM::msm(&params.c_query_1, aux_assignment).unwrap();
+    let c1_acc:PairingOutput<E>::G1Affine= VariableBaseMSM::msm(&params.c_query_1, aux_assignment).unwrap();
     end_timer!(c1_acc_time);
 
     let c2_acc_time = start_timer!(|| "Compute C2");
 
     let (c2_inputs, c2_aux) = params.c_query_2.split_at(num_inputs);
-    let c2_inputs_acc = VariableBaseMSM::msm(&c2_inputs[1..], &input_assignment);
+    let c2_inputs_acc = VariableBaseMSM::msm(&c2_inputs[1..], &input_assignment).unwrap();
     let c2_aux_acc = VariableBaseMSM::msm(c2_aux, aux_assignment).unwrap();
 
     let c2_acc = c2_inputs_acc + &c2_aux_acc;
@@ -149,7 +149,7 @@ where
     let g_acc_time = start_timer!(|| "Compute G");
 
     let (g_inputs, g_aux) = params.g_gamma2_z_t.split_at(num_inputs);
-    let g_inputs_acc = VariableBaseMSM::msm(g_inputs, &h_input);
+    let g_inputs_acc = VariableBaseMSM::msm(g_inputs, &h_input).unwrap();
     let g_aux_acc = VariableBaseMSM::msm(g_aux, &h_aux).unwrap();
 
     let g_acc = g_inputs_acc + &g_aux_acc;
@@ -164,8 +164,8 @@ where
     let mut r_c2_exp = c2_acc;
     r_c2_exp *= r;
 
-    let mut g_c = c1_acc;
-    g_c += &r2_g_gamma2_z2;
+    let mut g_c = c1_acc.0;
+    g_c += r2_g_gamma2_z2;
     g_c += &r_g_ab_gamma_z;
     g_c += &d1_g_ab_gamma_z;
     g_c += &r_c0;

@@ -3,8 +3,6 @@
 //! [`Groth-Maller`]: https://eprint.iacr.org/2017/540
 #![cfg_attr(not(feature = "std"), no_std)]
 #![deny(
-    warnings,
-    unused,
     future_incompatible,
     nonstandard_style,
     rust_2018_idioms,
@@ -12,6 +10,7 @@
 )]
 #![allow(clippy::many_single_char_names, clippy::op_ref)]
 #![forbid(unsafe_code)]
+#![feature(slice_pattern)]
 
 #[macro_use]
 extern crate ark_std;
