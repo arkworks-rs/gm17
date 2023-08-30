@@ -1,7 +1,7 @@
 use core::ops::Mul;
 
 use ark_ec::{pairing::Pairing, CurveGroup, scalar_mul::fixed_base::FixedBase};
-use ark_ff::{Field, One, UniformRand, Zero};
+use ark_ff::{Field, One, UniformRand, Zero, PrimeField};
 use ark_poly::{EvaluationDomain, GeneralEvaluationDomain};
 use ark_relations::r1cs::{
     ConstraintSynthesizer, ConstraintSystem, OptimizationGoal, Result as R1CSResult,
@@ -87,8 +87,7 @@ where
     let non_zero_a = cfg_into_iter!(0..sap_num_variables)
         .map(|i| (!a[i].is_zero()) as usize)
         .sum();
-    // let scalar_bits = E::ScalarField::size_in_bits();
-    let scalar_bits = 12;
+    let scalar_bits = E::ScalarField::MODULUS_BIT_SIZE as usize;
 
     // Compute G window table
     let g_window_time = start_timer!(|| "Compute G window table");
