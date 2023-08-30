@@ -74,11 +74,13 @@ where
     let num_inputs = prover.num_instance_variables;
 
     let input_assignment = &full_input_assignment[1..num_inputs];
+    print!("input_assignment: {:?}", input_assignment);
 
     let aux_assignment = cfg_into_iter!(full_input_assignment[num_inputs..])
         .map(|s| s.to_owned())
         .collect::<Vec<_>>();
     let aux_assignment: &[E::ScalarField] = aux_assignment.as_slice();
+    print!("aux_assignment: {:?}", aux_assignment);
     // drop(full_input_assignment);
 
     let h_input = &h[0..num_inputs];
@@ -161,7 +163,7 @@ where
     r_c2_exp *= r;
 
     let mut g_c = c1_acc;
-    g_c +=r2_g_gamma2_z2;
+    g_c +=&r2_g_gamma2_z2;
     g_c += &r_g_ab_gamma_z;
     g_c += &d1_g_ab_gamma_z;
     g_c += &r_c0;
