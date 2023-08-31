@@ -80,7 +80,6 @@ where
     let aux_assignment = cfg_into_iter!(full_input_assignment[num_inputs..])
         .map(|s| s.to_owned())
         .collect::<Vec<_>>();
-    // let aux_assignment: &[E::ScalarField] = aux_assignment.as_slice();
 
     let h_input = &h[0..num_inputs];
     let h_aux = cfg_into_iter!(h[num_inputs..])
