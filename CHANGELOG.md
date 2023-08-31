@@ -10,6 +10,10 @@
 
 ### Bug fixes
 
+## v0.4.0
+
+- Change dependency to version `0.4.0` of other arkwork-rs crates.
+
 ## v0.3.0
 
 - Change dependency to version `0.3.0` of other arkworks-rs crates.
