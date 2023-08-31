@@ -79,18 +79,16 @@ where
         .map(|s| s.to_owned())
         .collect::<Vec<_>>();
     let aux_assignment: &[E::ScalarField] = aux_assignment.as_slice();
-    // drop(full_input_assignment);
 
     let h_input = &h[0..num_inputs];
     let h_aux = cfg_into_iter!(h[num_inputs..])
         .map(|s| s.to_owned())
         .collect::<Vec<_>>();
-    // drop(h);
 
     // Compute A
     let a_acc_time = start_timer!(|| "Compute A");
     let (a_inputs, a_aux) = params.a_query.split_at(num_inputs);
-    let a_inputs_acc: E::G1= VariableBaseMSM::msm_unchecked(&a_inputs[1..], input_assignment);
+    let a_inputs_acc: E::G1= VariableBaseMSM::msm(&a_inputs[1..], input_assignment).unwrap();
     let a_aux_acc :E::G1 = VariableBaseMSM::msm(a_aux, aux_assignment).unwrap();
 
     let r_g = params.g_gamma_z.mul(r);
@@ -107,7 +105,7 @@ where
     let b_acc_time = start_timer!(|| "Compute B");
 
     let (b_inputs, b_aux) = params.b_query.split_at(num_inputs);
-    let b_inputs_acc:E::G2 = VariableBaseMSM::msm_unchecked(&b_inputs[1..], input_assignment);
+    let b_inputs_acc:E::G2 = VariableBaseMSM::msm(&b_inputs[1..], input_assignment).unwrap();
     let b_aux_acc :E::G2= VariableBaseMSM::msm(b_aux, aux_assignment).unwrap();
 
     let r_h = params.h_gamma_z.mul(r);
@@ -127,9 +125,9 @@ where
     let d1_r_2 = d1 * &r_2;
 
     let c1_acc_time = start_timer!(|| "Compute C1");
-    let c1_acc: E::G1= VariableBaseMSM::msm_unchecked(
+    let c1_acc: E::G1= VariableBaseMSM::msm(
         &params.c_query_1,
-         aux_assignment);
+         aux_assignment).unwrap();
     end_timer!(c1_acc_time);
 
     let c2_acc_time = start_timer!(|| "Compute C2");
