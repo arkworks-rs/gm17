@@ -2,7 +2,6 @@ use ark_ec::{pairing::{Pairing, MillerLoopOutput}, CurveGroup, AffineRepr};
 use ark_relations::r1cs::{Result as R1CSResult, SynthesisError};
 use core::ops::{Mul, AddAssign};
 use num_traits::Zero;
-use std::ops::Neg;
 
 use super::{PreparedVerifyingKey, Proof, VerifyingKey};
 
@@ -61,8 +60,8 @@ pub fn verify_proof<E: Pairing>(
         pvk.h_pc.clone()
     ];
 
-    let test1_r2 = E::multi_miller_loop(test1_r2_input_g1.to_owned(), test1_r2_input_g2.to_owned()).0;
-    let mlo = MillerLoopOutput(test1_r2 * test1_r1);
+    let test1_r2 = E::multi_miller_loop(test1_r2_input_g1.to_owned(), test1_r2_input_g2.to_owned());
+    let mlo = MillerLoopOutput(test1_r1*test1_r2.0);
     let test1 = E::final_exponentiation(mlo).unwrap();
 
     // e(A, H^{gamma}) = e(G^{gamma}, B)
@@ -75,9 +74,8 @@ pub fn verify_proof<E: Pairing>(
         (-proof.b.into_group()).into().into(),
     ];
 
-    let test2_exp = E::multi_miller_loop(test2_exp_input_g1.to_owned(), test2_exp_input_g2.to_owned()).0;
-    let mlo = MillerLoopOutput(test1_r2 * test1_r1);
-    let test2 = E::final_exponentiation(mlo).unwrap();
+    let test2_exp = E::multi_miller_loop(test2_exp_input_g1.to_owned(), test2_exp_input_g2.to_owned());
+    let test2 = E::final_exponentiation(test2_exp).unwrap();
 
     Ok(test1.is_zero() && test2.is_zero())
 }
