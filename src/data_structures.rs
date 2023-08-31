@@ -1,9 +1,6 @@
 use ark_ec::pairing::Pairing;
-use ark_serialize::CanonicalSerialize;
-use ark_serialize::*;
-use ark_std::{
-    vec::Vec,
-};
+use ark_serialize::{CanonicalSerialize, *};
+use ark_std::vec::Vec;
 
 /// A proof in the GM17 SNARK.
 #[derive(PartialEq, Eq, Clone, Default, CanonicalSerialize, CanonicalDeserialize)]

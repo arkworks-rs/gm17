@@ -2,15 +2,9 @@
 //!
 //! [`Groth-Maller`]: https://eprint.iacr.org/2017/540
 #![cfg_attr(not(feature = "std"), no_std)]
-#![deny(
-    future_incompatible,
-    nonstandard_style,
-    rust_2018_idioms,
-    missing_docs
-)]
+#![deny(future_incompatible, nonstandard_style, rust_2018_idioms, missing_docs)]
 #![allow(clippy::many_single_char_names, clippy::op_ref)]
 #![forbid(unsafe_code)]
-#![feature(slice_pattern)]
 
 #[macro_use]
 extern crate ark_std;
@@ -41,14 +35,12 @@ pub mod constraints;
 #[cfg(test)]
 mod test;
 
-pub use self::data_structures::*;
-pub use self::{generator::*, prover::*, verifier::*};
+pub use self::{data_structures::*, generator::*, prover::*, verifier::*};
 
 use ark_crypto_primitives::snark::{CircuitSpecificSetupSNARK, SNARK};
 use ark_ec::pairing::Pairing;
 use ark_relations::r1cs::{ConstraintSynthesizer, SynthesisError};
-use ark_std::marker::PhantomData;
-use ark_std::rand::RngCore;
+use ark_std::{marker::PhantomData, rand::RngCore};
 
 /// The SNARK of [[GrothMaller17]](https://eprint.iacr.org/2017/540).
 pub struct GM17<E: Pairing> {

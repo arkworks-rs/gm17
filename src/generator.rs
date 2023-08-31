@@ -1,7 +1,7 @@
 use core::ops::Mul;
 
-use ark_ec::{pairing::Pairing, CurveGroup, scalar_mul::fixed_base::FixedBase};
-use ark_ff::{Field, One, UniformRand, Zero, PrimeField};
+use ark_ec::{pairing::Pairing, scalar_mul::fixed_base::FixedBase, CurveGroup};
+use ark_ff::{Field, One, PrimeField, UniformRand, Zero};
 use ark_poly::{EvaluationDomain, GeneralEvaluationDomain};
 use ark_relations::r1cs::{
     ConstraintSynthesizer, ConstraintSystem, OptimizationGoal, Result as R1CSResult,
@@ -78,8 +78,10 @@ where
     ///////////////////////////////////////////////////////////////////////////
 
     let reduction_time = start_timer!(|| "R1CS to SAP Instance Map with Evaluation");
-    let (a, c, zt, sap_num_variables, m_raw) =
-        R1CStoSAP::instance_map_with_evaluation::<E::ScalarField, D<E::ScalarField>>(cs.clone(), &t)?;
+    let (a, c, zt, sap_num_variables, m_raw) = R1CStoSAP::instance_map_with_evaluation::<
+        E::ScalarField,
+        D<E::ScalarField>,
+    >(cs.clone(), &t)?;
     end_timer!(reduction_time);
     drop(cs);
 
@@ -173,18 +175,12 @@ where
     // Compute H_gamma window table
     let h_gamma_time = start_timer!(|| "Compute H table");
     let h_gamma_window = FixedBase::get_mul_window_size(non_zero_a);
-    let h_gamma_table =
-        FixedBase::get_window_table::<E::G2>(scalar_bits, h_gamma_window, h_gamma);
+    let h_gamma_table = FixedBase::get_window_table::<E::G2>(scalar_bits, h_gamma_window, h_gamma);
     end_timer!(h_gamma_time);
 
     // Compute the B-query
     let b_time = start_timer!(|| "Calculate B");
-    let b_query = FixedBase::msm::<E::G2>(
-        scalar_bits,
-        h_gamma_window,
-        &h_gamma_table,
-        &a,
-    );
+    let b_query = FixedBase::msm::<E::G2>(scalar_bits, h_gamma_window, &h_gamma_table, &a);
     drop(h_gamma_table);
     end_timer!(b_time);
 

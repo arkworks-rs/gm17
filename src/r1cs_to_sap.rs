@@ -133,7 +133,7 @@ impl R1CStoSAP {
         let domain = D::new(2 * num_constraints + 2 * (num_inputs - 1) + 1)
             .ok_or(SynthesisError::PolynomialDegreeTooLarge)?;
         let domain_size = domain.size();
-        
+
         let coset_domain = domain.get_coset(F::GENERATOR).unwrap();
 
         let extra_constr_offset = 2 * num_constraints;
