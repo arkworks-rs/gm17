@@ -81,7 +81,11 @@ where
         .map(|s| s.to_owned())
         .collect::<Vec<_>>();
 
-    let h_input = &h[0..num_inputs];
+    let h_input = h[0..num_inputs]
+        .iter()
+        .map(|s| s.to_owned())
+        .collect::<Vec<_>>();
+
     let h_aux = cfg_into_iter!(h[num_inputs..])
         .map(|s| s.to_owned())
         .collect::<Vec<_>>();
