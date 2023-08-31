@@ -80,6 +80,7 @@ where
     let aux_assignment = cfg_into_iter!(full_input_assignment[num_inputs..])
         .map(|s| s.to_owned())
         .collect::<Vec<_>>();
+    drop(full_input_assignment);
 
     let h_input = h[0..num_inputs]
         .iter()
@@ -89,6 +90,7 @@ where
     let h_aux = cfg_into_iter!(h[num_inputs..])
         .map(|s| s.to_owned())
         .collect::<Vec<_>>();
+    drop(h);
 
     // Compute A
     let a_acc_time = start_timer!(|| "Compute A");
