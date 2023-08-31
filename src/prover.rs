@@ -5,9 +5,7 @@ use ark_std::rand::Rng;
 use rayon::prelude::*;
 
 use ark_ec::{
-    pairing::Pairing,
-    scalar_mul::variable_base::VariableBaseMSM,
-    AffineRepr, CurveGroup,
+    pairing::Pairing, scalar_mul::variable_base::VariableBaseMSM, AffineRepr, CurveGroup,
 };
 use ark_ff::UniformRand;
 use ark_poly::GeneralEvaluationDomain;
