@@ -40,7 +40,10 @@ pub use self::{data_structures::*, generator::*, prover::*, verifier::*};
 use ark_crypto_primitives::snark::{CircuitSpecificSetupSNARK, SNARK};
 use ark_ec::pairing::Pairing;
 use ark_relations::r1cs::{ConstraintSynthesizer, SynthesisError};
-use ark_std::{marker::PhantomData, rand::{RngCore, CryptoRng}};
+use ark_std::{
+    marker::PhantomData,
+    rand::{CryptoRng, RngCore},
+};
 
 /// The SNARK of [[GrothMaller17]](https://eprint.iacr.org/2017/540).
 pub struct GM17<E: Pairing> {

@@ -3,7 +3,7 @@ use ark_crypto_primitives::snark::{
     constraints::{CircuitSpecificSetupSNARKGadget, SNARKGadget},
     BooleanInputVar, SNARK,
 };
-use ark_ec::{AffineRepr, pairing::Pairing};
+use ark_ec::{pairing::Pairing, AffineRepr};
 use ark_r1cs_std::{
     alloc::{AllocVar, AllocationMode},
     bits::{boolean::Boolean, uint8::UInt8},
@@ -115,7 +115,9 @@ impl<E: Pairing, P: PairingVar<E, E::BaseField>> SNARKGadget<E::ScalarField, E::
 
     type VerifierSize = usize;
 
-    fn verifier_size(circuit_vk: &<GM17<E> as SNARK<E::ScalarField>>::VerifyingKey) -> Self::VerifierSize {
+    fn verifier_size(
+        circuit_vk: &<GM17<E> as SNARK<E::ScalarField>>::VerifyingKey,
+    ) -> Self::VerifierSize {
         circuit_vk.query.len()
     }
 
@@ -295,7 +297,8 @@ impl<E: Pairing, P: PairingVar<E, E::BaseField>> SNARKGadget<E::ScalarField, E::
     }
 }
 
-impl<E, P> CircuitSpecificSetupSNARKGadget<E::ScalarField, E::BaseField, GM17<E>> for GM17VerifierGadget<E, P>
+impl<E, P> CircuitSpecificSetupSNARKGadget<E::ScalarField, E::BaseField, GM17<E>>
+    for GM17VerifierGadget<E, P>
 where
     E: Pairing,
     P: PairingVar<E, E::BaseField>,
@@ -532,7 +535,7 @@ mod test {
 
     #[test]
     fn gm17_snark_test() {
-        let mut rng = test_rng();
+        let mut rng = ark_std::test_rng();
         let a = MNT4Fr::rand(&mut rng);
         let b = MNT4Fr::rand(&mut rng);
         let mut c = a;
