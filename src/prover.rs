@@ -1,6 +1,5 @@
+use ark_std::{borrow::ToOwned, rand::Rng};
 use core::ops::Mul;
-
-use ark_std::rand::Rng;
 #[cfg(feature = "parallel")]
 use rayon::prelude::*;
 
