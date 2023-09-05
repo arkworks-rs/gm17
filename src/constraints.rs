@@ -493,7 +493,7 @@ mod test {
         lc, ns,
         r1cs::{ConstraintSynthesizer, ConstraintSystem, ConstraintSystemRef, SynthesisError},
     };
-    use ark_std::{ops::MulAssign, test_rng};
+    use ark_std::{ops::MulAssign , rand::{Rng, SeedableRng, rngs}};
 
     #[derive(Copy, Clone)]
     struct Circuit<F: Field> {
@@ -535,7 +535,8 @@ mod test {
 
     #[test]
     fn gm17_snark_test() {
-        let mut rng = ark_std::test_rng();
+        let mut _rng = ark_std::test_rng();
+        let mut rng = rngs::StdRng::from_seed(_rng.gen());
         let a = MNT4Fr::rand(&mut rng);
         let b = MNT4Fr::rand(&mut rng);
         let mut c = a;
