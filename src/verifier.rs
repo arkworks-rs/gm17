@@ -3,8 +3,8 @@ use ark_ec::{
     AffineRepr, CurveGroup,
 };
 use ark_relations::r1cs::{Result as R1CSResult, SynthesisError};
+use ark_std::Zero;
 use core::ops::{AddAssign, Mul};
-use num_traits::Zero;
 
 use super::{PreparedVerifyingKey, Proof, VerifyingKey};
 

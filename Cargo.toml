@@ -28,7 +28,6 @@ tracing = { version = "0.1", default-features = false, features = [ "attributes"
 derivative = { version = "2.0", features = ["use_core"], optional = true }
 
 rayon = { version = "1", optional = true }
-num-traits = "0.2.16"
 
 [dev-dependencies]
 csv = { version = "1" }
