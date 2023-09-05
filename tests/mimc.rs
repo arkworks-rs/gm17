@@ -17,12 +17,7 @@
     unused_allocation,
     unused_comparisons
 )]
-#![deny(
-    unused_must_use,
-    unused_mut,
-    unused_unsafe,
-    unsafe_code
-)]
+#![deny(unused_must_use, unused_mut, unused_unsafe, unsafe_code)]
 
 // For randomness (during paramgen and proof generation)
 use ark_std::rand::Rng;

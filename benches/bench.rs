@@ -15,7 +15,11 @@ use ark_relations::{
     lc,
     r1cs::{ConstraintSynthesizer, ConstraintSystemRef, SynthesisError},
 };
-use ark_std::{rand::{SeedableRng,Rng, rngs}, ops::Mul, UniformRand};
+use ark_std::{
+    ops::Mul,
+    rand::{rngs, Rng, SeedableRng},
+    UniformRand,
+};
 
 const NUM_PROVE_REPEATITIONS: usize = 10;
 const NUM_VERIFY_REPEATITIONS: usize = 50;

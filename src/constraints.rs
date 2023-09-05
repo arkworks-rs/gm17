@@ -493,7 +493,10 @@ mod test {
         lc, ns,
         r1cs::{ConstraintSynthesizer, ConstraintSystem, ConstraintSystemRef, SynthesisError},
     };
-    use ark_std::{ops::MulAssign , rand::{Rng, SeedableRng, rngs}};
+    use ark_std::{
+        ops::MulAssign,
+        rand::{rngs, Rng, SeedableRng},
+    };
 
     #[derive(Copy, Clone)]
     struct Circuit<F: Field> {
