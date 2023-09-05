@@ -1,9 +1,12 @@
-use ark_std::rand::Rng;
+use ark_std::{borrow::ToOwned, rand::Rng};
+use core::ops::Mul;
 #[cfg(feature = "parallel")]
 use rayon::prelude::*;
 
-use ark_ec::{msm::VariableBaseMSM, AffineCurve, PairingEngine, ProjectiveCurve};
-use ark_ff::{PrimeField, UniformRand};
+use ark_ec::{
+    pairing::Pairing, scalar_mul::variable_base::VariableBaseMSM, AffineRepr, CurveGroup,
+};
+use ark_ff::UniformRand;
 use ark_poly::GeneralEvaluationDomain;
 use ark_std::{cfg_into_iter, vec::Vec};
 
@@ -21,13 +24,13 @@ pub fn create_random_proof<E, C, R>(
     rng: &mut R,
 ) -> Result<Proof<E>, SynthesisError>
 where
-    E: PairingEngine,
-    C: ConstraintSynthesizer<E::Fr>,
+    E: Pairing,
+    C: ConstraintSynthesizer<E::ScalarField>,
     R: Rng,
 {
-    let d1 = E::Fr::rand(rng);
-    let d2 = E::Fr::rand(rng);
-    let r = E::Fr::rand(rng);
+    let d1 = E::ScalarField::rand(rng);
+    let d2 = E::ScalarField::rand(rng);
+    let r = E::ScalarField::rand(rng);
 
     create_proof::<E, C>(circuit, params, d1, d2, r)
 }
@@ -36,13 +39,13 @@ where
 pub fn create_proof<E, C>(
     circuit: C,
     params: &ProvingKey<E>,
-    d1: E::Fr,
-    d2: E::Fr,
-    r: E::Fr,
+    d1: E::ScalarField,
+    d2: E::ScalarField,
+    r: E::ScalarField,
 ) -> Result<Proof<E>, SynthesisError>
 where
-    E: PairingEngine,
-    C: ConstraintSynthesizer<E::Fr>,
+    E: Pairing,
+    C: ConstraintSynthesizer<E::ScalarField>,
 {
     type D<F> = GeneralEvaluationDomain<F>;
 
@@ -63,41 +66,42 @@ where
 
     let witness_map_time = start_timer!(|| "R1CS to SAP witness map");
     let (full_input_assignment, h, _) =
-        R1CStoSAP::witness_map::<E::Fr, D<E::Fr>>(cs.clone(), &d1, &d2)?;
+        R1CStoSAP::witness_map::<E::ScalarField, D<E::ScalarField>>(cs.clone(), &d1, &d2)?;
     end_timer!(witness_map_time);
     let prover = cs.borrow().unwrap();
     let num_inputs = prover.num_instance_variables;
 
     let input_assignment = full_input_assignment[1..num_inputs]
         .iter()
-        .map(|s| s.into_repr())
+        .map(|s| s.to_owned())
         .collect::<Vec<_>>();
 
     let aux_assignment = cfg_into_iter!(full_input_assignment[num_inputs..])
-        .map(|s| s.into_repr())
+        .map(|s| s.to_owned())
         .collect::<Vec<_>>();
     drop(full_input_assignment);
 
     let h_input = h[0..num_inputs]
         .iter()
-        .map(|s| s.into_repr())
+        .map(|s| s.to_owned())
         .collect::<Vec<_>>();
+
     let h_aux = cfg_into_iter!(h[num_inputs..])
-        .map(|s| s.into_repr())
+        .map(|s| s.to_owned())
         .collect::<Vec<_>>();
     drop(h);
 
     // Compute A
     let a_acc_time = start_timer!(|| "Compute A");
     let (a_inputs, a_aux) = params.a_query.split_at(num_inputs);
-    let a_inputs_acc = VariableBaseMSM::multi_scalar_mul(&a_inputs[1..], &input_assignment);
-    let a_aux_acc = VariableBaseMSM::multi_scalar_mul(a_aux, &aux_assignment);
+    let a_inputs_acc: E::G1 = VariableBaseMSM::msm(&a_inputs[1..], &input_assignment).unwrap();
+    let a_aux_acc: E::G1 = VariableBaseMSM::msm(a_aux, &aux_assignment).unwrap();
 
     let r_g = params.g_gamma_z.mul(r);
     let d1_g = params.g_gamma_z.mul(d1);
 
     let mut g_a = r_g;
-    g_a += &params.a_query[0].into_projective();
+    g_a += &params.a_query[0].into_group();
     g_a += &d1_g;
     g_a += &a_inputs_acc;
     g_a += &a_aux_acc;
@@ -107,14 +111,14 @@ where
     let b_acc_time = start_timer!(|| "Compute B");
 
     let (b_inputs, b_aux) = params.b_query.split_at(num_inputs);
-    let b_inputs_acc = VariableBaseMSM::multi_scalar_mul(&b_inputs[1..], &input_assignment);
-    let b_aux_acc = VariableBaseMSM::multi_scalar_mul(b_aux, &aux_assignment);
+    let b_inputs_acc: E::G2 = VariableBaseMSM::msm(&b_inputs[1..], &input_assignment).unwrap();
+    let b_aux_acc: E::G2 = VariableBaseMSM::msm(b_aux, &aux_assignment).unwrap();
 
     let r_h = params.h_gamma_z.mul(r);
     let d1_h = params.h_gamma_z.mul(d1);
 
     let mut g_b = r_h;
-    g_b += &params.b_query[0].into_projective();
+    g_b += &params.b_query[0].into_group();
     g_b += &d1_h;
     g_b += &b_inputs_acc;
     g_b += &b_aux_acc;
@@ -127,14 +131,14 @@ where
     let d1_r_2 = d1 * &r_2;
 
     let c1_acc_time = start_timer!(|| "Compute C1");
-    let c1_acc = VariableBaseMSM::multi_scalar_mul(&params.c_query_1, &aux_assignment);
+    let c1_acc: E::G1 = VariableBaseMSM::msm(&params.c_query_1, &aux_assignment).unwrap();
     end_timer!(c1_acc_time);
 
     let c2_acc_time = start_timer!(|| "Compute C2");
 
     let (c2_inputs, c2_aux) = params.c_query_2.split_at(num_inputs);
-    let c2_inputs_acc = VariableBaseMSM::multi_scalar_mul(&c2_inputs[1..], &input_assignment);
-    let c2_aux_acc = VariableBaseMSM::multi_scalar_mul(c2_aux, &aux_assignment);
+    let c2_inputs_acc: E::G1 = VariableBaseMSM::msm(&c2_inputs[1..], &input_assignment).unwrap();
+    let c2_aux_acc: E::G1 = VariableBaseMSM::msm(c2_aux, &aux_assignment).unwrap();
 
     let c2_acc = c2_inputs_acc + &c2_aux_acc;
     end_timer!(c2_acc_time);
@@ -143,8 +147,8 @@ where
     let g_acc_time = start_timer!(|| "Compute G");
 
     let (g_inputs, g_aux) = params.g_gamma2_z_t.split_at(num_inputs);
-    let g_inputs_acc = VariableBaseMSM::multi_scalar_mul(g_inputs, &h_input);
-    let g_aux_acc = VariableBaseMSM::multi_scalar_mul(g_aux, &h_aux);
+    let g_inputs_acc: E::G1 = VariableBaseMSM::msm(g_inputs, &h_input).unwrap();
+    let g_aux_acc: E::G1 = VariableBaseMSM::msm(g_aux, &h_aux).unwrap();
 
     let g_acc = g_inputs_acc + &g_aux_acc;
     end_timer!(g_acc_time);

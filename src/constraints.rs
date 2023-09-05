@@ -1,14 +1,15 @@
 use crate::{PreparedVerifyingKey, Proof, VerifyingKey, GM17};
-use ark_crypto_primitives::snark::constraints::{CircuitSpecificSetupSNARKGadget, SNARKGadget};
-use ark_crypto_primitives::snark::{BooleanInputVar, SNARK};
-use ark_ec::{AffineCurve, PairingEngine};
-use ark_r1cs_std::fields::FieldVar;
-use ark_r1cs_std::groups::CurveVar;
+use ark_crypto_primitives::snark::{
+    constraints::{CircuitSpecificSetupSNARKGadget, SNARKGadget},
+    BooleanInputVar, SNARK,
+};
+use ark_ec::{pairing::Pairing, AffineRepr};
 use ark_r1cs_std::{
     alloc::{AllocVar, AllocationMode},
-    bits::boolean::Boolean,
-    bits::uint8::UInt8,
+    bits::{boolean::Boolean, uint8::UInt8},
     eq::EqGadget,
+    fields::FieldVar,
+    groups::CurveVar,
     pairing::PairingVar,
     ToBitsGadget, ToBytesGadget,
 };
@@ -18,7 +19,7 @@ use ark_std::{borrow::Borrow, marker::PhantomData, vec::Vec};
 /// The proof variable for the GM17 construction
 #[derive(Derivative)]
 #[derivative(Clone(bound = "P::G1Var: Clone, P::G2Var: Clone"))]
-pub struct ProofVar<E: PairingEngine, P: PairingVar<E>> {
+pub struct ProofVar<E: Pairing, P: PairingVar<E, E::BaseField>> {
     /// The `A` element in `G1`.
     pub a: P::G1Var,
     /// The `B` element in `G2`.
@@ -33,7 +34,7 @@ pub struct ProofVar<E: PairingEngine, P: PairingVar<E>> {
     Clone(bound = "P::G1Var: Clone, P::GTVar: Clone, P::G1PreparedVar: Clone, \
     P::G2PreparedVar: Clone, ")
 )]
-pub struct VerifyingKeyVar<E: PairingEngine, P: PairingVar<E>> {
+pub struct VerifyingKeyVar<E: Pairing, P: PairingVar<E, E::BaseField>> {
     #[doc(hidden)]
     pub h_g2: P::G2Var,
     #[doc(hidden)]
@@ -48,7 +49,7 @@ pub struct VerifyingKeyVar<E: PairingEngine, P: PairingVar<E>> {
     pub query: Vec<P::G1Var>,
 }
 
-impl<E: PairingEngine, P: PairingVar<E>> VerifyingKeyVar<E, P> {
+impl<E: Pairing, P: PairingVar<E, E::BaseField>> VerifyingKeyVar<E, P> {
     /// Prepare `self` for use in proof verification.
     pub fn prepare(&self) -> Result<PreparedVerifyingKeyVar<E, P>, SynthesisError> {
         let g_alpha_pc = P::prepare_g1(&self.g_alpha_g1)?;
@@ -75,7 +76,7 @@ impl<E: PairingEngine, P: PairingVar<E>> VerifyingKeyVar<E, P> {
     Clone(bound = "P::G1Var: Clone, P::GTVar: Clone, P::G1PreparedVar: Clone, \
     P::G2PreparedVar: Clone, ")
 )]
-pub struct PreparedVerifyingKeyVar<E: PairingEngine, P: PairingVar<E>> {
+pub struct PreparedVerifyingKeyVar<E: Pairing, P: PairingVar<E, E::BaseField>> {
     #[doc(hidden)]
     pub g_alpha: P::G1Var,
     #[doc(hidden)]
@@ -97,24 +98,26 @@ pub struct PreparedVerifyingKeyVar<E: PairingEngine, P: PairingVar<E>> {
 /// Constraints for the verifier of the SNARK of [[GM17]](https://eprint.iacr.org/2017/540.pdf).
 pub struct GM17VerifierGadget<E, P>
 where
-    E: PairingEngine,
-    P: PairingVar<E>,
+    E: Pairing,
+    P: PairingVar<E, E::BaseField>,
 {
     _pairing_engine: PhantomData<E>,
     _pairing_gadget: PhantomData<P>,
 }
 
-impl<E: PairingEngine, P: PairingVar<E, E::Fq>> SNARKGadget<E::Fr, E::Fq, GM17<E>>
+impl<E: Pairing, P: PairingVar<E, E::BaseField>> SNARKGadget<E::ScalarField, E::BaseField, GM17<E>>
     for GM17VerifierGadget<E, P>
 {
     type ProcessedVerifyingKeyVar = PreparedVerifyingKeyVar<E, P>;
     type VerifyingKeyVar = VerifyingKeyVar<E, P>;
-    type InputVar = BooleanInputVar<E::Fr, E::Fq>;
+    type InputVar = BooleanInputVar<E::ScalarField, E::BaseField>;
     type ProofVar = ProofVar<E, P>;
 
     type VerifierSize = usize;
 
-    fn verifier_size(circuit_vk: &<GM17<E> as SNARK<E::Fr>>::VerifyingKey) -> Self::VerifierSize {
+    fn verifier_size(
+        circuit_vk: &<GM17<E> as SNARK<E::ScalarField>>::VerifyingKey,
+    ) -> Self::VerifierSize {
         circuit_vk.query.len()
     }
 
@@ -122,7 +125,7 @@ impl<E: PairingEngine, P: PairingVar<E, E::Fq>> SNARKGadget<E::Fr, E::Fq, GM17<E
     /// subgroup checks.
     #[tracing::instrument(target = "r1cs", skip(cs, f))]
     fn new_proof_unchecked<T: Borrow<Proof<E>>>(
-        cs: impl Into<Namespace<E::Fq>>,
+        cs: impl Into<Namespace<E::BaseField>>,
         f: impl FnOnce() -> Result<T, SynthesisError>,
         mode: AllocationMode,
     ) -> Result<Self::ProofVar, SynthesisError> {
@@ -132,17 +135,17 @@ impl<E: PairingEngine, P: PairingVar<E, E::Fq>> SNARKGadget<E::Fr, E::Fq, GM17<E
             let proof = proof.borrow();
             let a = CurveVar::new_variable_omit_prime_order_check(
                 ark_relations::ns!(cs, "Proof.a"),
-                || Ok(proof.a.into_projective()),
+                || Ok(proof.a.into_group()),
                 mode,
             )?;
             let b = CurveVar::new_variable_omit_prime_order_check(
                 ark_relations::ns!(cs, "Proof.b"),
-                || Ok(proof.b.into_projective()),
+                || Ok(proof.b.into_group()),
                 mode,
             )?;
             let c = CurveVar::new_variable_omit_prime_order_check(
                 ark_relations::ns!(cs, "Proof.c"),
-                || Ok(proof.c.into_projective()),
+                || Ok(proof.c.into_group()),
                 mode,
             )?;
             Ok(ProofVar { a, b, c })
@@ -153,7 +156,7 @@ impl<E: PairingEngine, P: PairingVar<E, E::Fq>> SNARKGadget<E::Fr, E::Fq, GM17<E
     /// subgroup checks.
     #[tracing::instrument(target = "r1cs", skip(cs, f))]
     fn new_verification_key_unchecked<T: Borrow<VerifyingKey<E>>>(
-        cs: impl Into<Namespace<E::Fq>>,
+        cs: impl Into<Namespace<E::BaseField>>,
         f: impl FnOnce() -> Result<T, SynthesisError>,
         mode: AllocationMode,
     ) -> Result<Self::VerifyingKeyVar, SynthesisError> {
@@ -163,27 +166,27 @@ impl<E: PairingEngine, P: PairingVar<E, E::Fq>> SNARKGadget<E::Fr, E::Fq, GM17<E
             let vk = vk.borrow();
             let g_alpha_g1 = P::G1Var::new_variable_omit_prime_order_check(
                 ark_relations::ns!(cs, "g_alpha"),
-                || Ok(vk.g_alpha_g1.into_projective()),
+                || Ok(vk.g_alpha_g1.into()),
                 mode,
             )?;
             let h_g2 = P::G2Var::new_variable_omit_prime_order_check(
                 ark_relations::ns!(cs, "h"),
-                || Ok(vk.h_g2.into_projective()),
+                || Ok(vk.h_g2.into()),
                 mode,
             )?;
             let h_beta_g2 = P::G2Var::new_variable_omit_prime_order_check(
                 ark_relations::ns!(cs, "h_beta"),
-                || Ok(vk.h_beta_g2.into_projective()),
+                || Ok(vk.h_beta_g2.into()),
                 mode,
             )?;
             let g_gamma_g1 = P::G1Var::new_variable_omit_prime_order_check(
                 ark_relations::ns!(cs, "g_gamma"),
-                || Ok(vk.g_gamma_g1.into_projective()),
+                || Ok(vk.g_gamma_g1.into()),
                 mode,
             )?;
             let h_gamma_g2 = P::G2Var::new_variable_omit_prime_order_check(
                 ark_relations::ns!(cs, "h_gamma"),
-                || Ok(vk.h_gamma_g2.into_projective()),
+                || Ok(vk.h_gamma_g2.into()),
                 mode,
             )?;
 
@@ -193,7 +196,7 @@ impl<E: PairingEngine, P: PairingVar<E, E::Fq>> SNARKGadget<E::Fr, E::Fq, GM17<E
                 .map(|g| {
                     P::G1Var::new_variable_omit_prime_order_check(
                         ark_relations::ns!(cs, "g"),
-                        || Ok(g.into_projective()),
+                        || Ok(g.to_owned().into_group()),
                         mode,
                     )
                 })
@@ -214,7 +217,7 @@ impl<E: PairingEngine, P: PairingVar<E, E::Fq>> SNARKGadget<E::Fr, E::Fq, GM17<E
         circuit_pvk: &Self::ProcessedVerifyingKeyVar,
         x: &Self::InputVar,
         proof: &Self::ProofVar,
-    ) -> Result<Boolean<E::Fq>, SynthesisError> {
+    ) -> Result<Boolean<E::BaseField>, SynthesisError> {
         let circuit_pvk = circuit_pvk.clone();
         // e(A*G^{alpha}, B*H^{beta}) = e(G^{alpha}, H^{beta}) * e(G^{psi}, H^{gamma}) *
         // e(C, H) where psi = \sum_{i=0}^l input_i pvk.query[i]
@@ -288,27 +291,28 @@ impl<E: PairingEngine, P: PairingVar<E, E::Fq>> SNARKGadget<E::Fr, E::Fq, GM17<E
         circuit_vk: &Self::VerifyingKeyVar,
         x: &Self::InputVar,
         proof: &Self::ProofVar,
-    ) -> Result<Boolean<E::Fq>, SynthesisError> {
+    ) -> Result<Boolean<E::BaseField>, SynthesisError> {
         let pvk = circuit_vk.prepare()?;
         Self::verify_with_processed_vk(&pvk, x, proof)
     }
 }
 
-impl<E, P> CircuitSpecificSetupSNARKGadget<E::Fr, E::Fq, GM17<E>> for GM17VerifierGadget<E, P>
+impl<E, P> CircuitSpecificSetupSNARKGadget<E::ScalarField, E::BaseField, GM17<E>>
+    for GM17VerifierGadget<E, P>
 where
-    E: PairingEngine,
-    P: PairingVar<E, E::Fq>,
+    E: Pairing,
+    P: PairingVar<E, E::BaseField>,
 {
 }
 
-impl<E, P> AllocVar<PreparedVerifyingKey<E>, E::Fq> for PreparedVerifyingKeyVar<E, P>
+impl<E, P> AllocVar<PreparedVerifyingKey<E>, E::BaseField> for PreparedVerifyingKeyVar<E, P>
 where
-    E: PairingEngine,
-    P: PairingVar<E>,
+    E: Pairing,
+    P: PairingVar<E, E::BaseField>,
 {
     #[tracing::instrument(target = "r1cs", skip(cs, f))]
     fn new_variable<T: Borrow<PreparedVerifyingKey<E>>>(
-        cs: impl Into<Namespace<E::Fq>>,
+        cs: impl Into<Namespace<E::BaseField>>,
         f: impl FnOnce() -> Result<T, SynthesisError>,
         mode: AllocationMode,
     ) -> Result<Self, SynthesisError> {
@@ -372,14 +376,14 @@ where
     }
 }
 
-impl<E, P> AllocVar<VerifyingKey<E>, E::Fq> for VerifyingKeyVar<E, P>
+impl<E, P> AllocVar<VerifyingKey<E>, E::BaseField> for VerifyingKeyVar<E, P>
 where
-    E: PairingEngine,
-    P: PairingVar<E>,
+    E: Pairing,
+    P: PairingVar<E, E::BaseField>,
 {
     #[tracing::instrument(target = "r1cs", skip(cs, f))]
     fn new_variable<T: Borrow<VerifyingKey<E>>>(
-        cs: impl Into<Namespace<E::Fq>>,
+        cs: impl Into<Namespace<E::BaseField>>,
         f: impl FnOnce() -> Result<T, SynthesisError>,
         mode: AllocationMode,
     ) -> Result<Self, SynthesisError> {
@@ -427,14 +431,14 @@ where
     }
 }
 
-impl<E, P> AllocVar<Proof<E>, E::Fq> for ProofVar<E, P>
+impl<E, P> AllocVar<Proof<E>, E::BaseField> for ProofVar<E, P>
 where
-    E: PairingEngine,
-    P: PairingVar<E>,
+    E: Pairing,
+    P: PairingVar<E, E::BaseField>,
 {
     #[tracing::instrument(target = "r1cs", skip(cs, f))]
     fn new_variable<T: Borrow<Proof<E>>>(
-        cs: impl Into<Namespace<E::Fq>>,
+        cs: impl Into<Namespace<E::BaseField>>,
         f: impl FnOnce() -> Result<T, SynthesisError>,
         mode: AllocationMode,
     ) -> Result<Self, SynthesisError> {
@@ -451,14 +455,14 @@ where
     }
 }
 
-impl<E, P> ToBytesGadget<E::Fq> for VerifyingKeyVar<E, P>
+impl<E, P> ToBytesGadget<E::BaseField> for VerifyingKeyVar<E, P>
 where
-    E: PairingEngine,
-    P: PairingVar<E>,
+    E: Pairing,
+    P: PairingVar<E, E::BaseField>,
 {
     #[inline]
     #[tracing::instrument(target = "r1cs", skip(self))]
-    fn to_bytes(&self) -> Result<Vec<UInt8<E::Fq>>, SynthesisError> {
+    fn to_bytes(&self) -> Result<Vec<UInt8<E::BaseField>>, SynthesisError> {
         let mut bytes = Vec::new();
         bytes.extend_from_slice(&self.h_g2.to_bytes()?);
         bytes.extend_from_slice(&self.g_alpha_g1.to_bytes()?);
@@ -475,22 +479,24 @@ where
 #[cfg(test)]
 mod test {
     use crate::{constraints::GM17VerifierGadget, GM17};
-    use ark_crypto_primitives::snark::constraints::SNARKGadget;
-    use ark_crypto_primitives::snark::{CircuitSpecificSetupSNARK, SNARK};
-    use ark_ec::PairingEngine;
+    use ark_crypto_primitives::snark::{
+        constraints::SNARKGadget, CircuitSpecificSetupSNARK, SNARK,
+    };
+    use ark_ec::pairing::Pairing;
     use ark_ff::{Field, UniformRand};
     use ark_mnt4_298::{
-        constraints::PairingVar as MNT4PairingVar, Fr as MNT4Fr, MNT4_298 as MNT4PairingEngine,
+        constraints::PairingVar as MNT4PairingVar, Fr as MNT4Fr, MNT4_298 as MNT4Pairing,
     };
     use ark_mnt6_298::Fr as MNT6Fr;
-    use ark_r1cs_std::bits::boolean::Boolean;
-    use ark_r1cs_std::{alloc::AllocVar, eq::EqGadget};
+    use ark_r1cs_std::{alloc::AllocVar, bits::boolean::Boolean, eq::EqGadget};
     use ark_relations::{
         lc, ns,
         r1cs::{ConstraintSynthesizer, ConstraintSystem, ConstraintSystemRef, SynthesisError},
     };
-    use ark_std::ops::MulAssign;
-    use ark_std::test_rng;
+    use ark_std::{
+        ops::MulAssign,
+        rand::{rngs, Rng, SeedableRng},
+    };
 
     #[derive(Copy, Clone)]
     struct Circuit<F: Field> {
@@ -527,12 +533,13 @@ mod test {
         }
     }
 
-    type TestSNARK = GM17<MNT4PairingEngine>;
-    type TestSNARKGadget = GM17VerifierGadget<MNT4PairingEngine, MNT4PairingVar>;
+    type TestSNARK = GM17<MNT4Pairing>;
+    type TestSNARKGadget = GM17VerifierGadget<MNT4Pairing, MNT4PairingVar>;
 
     #[test]
     fn gm17_snark_test() {
-        let mut rng = test_rng();
+        let mut _rng = ark_std::test_rng();
+        let mut rng = rngs::StdRng::from_seed(_rng.gen());
         let a = MNT4Fr::rand(&mut rng);
         let b = MNT4Fr::rand(&mut rng);
         let mut c = a;
@@ -558,26 +565,26 @@ mod test {
         let cs = ConstraintSystemRef::new(cs_sys);
 
         let input_gadget = <TestSNARKGadget as SNARKGadget<
-            <MNT4PairingEngine as PairingEngine>::Fr,
-            <MNT4PairingEngine as PairingEngine>::Fq,
+            <MNT4Pairing as Pairing>::ScalarField,
+            <MNT4Pairing as Pairing>::BaseField,
             TestSNARK,
         >>::InputVar::new_input(ns!(cs, "new_input"), || Ok(vec![c]))
         .unwrap();
         let proof_gadget = <TestSNARKGadget as SNARKGadget<
-            <MNT4PairingEngine as PairingEngine>::Fr,
-            <MNT4PairingEngine as PairingEngine>::Fq,
+            <MNT4Pairing as Pairing>::ScalarField,
+            <MNT4Pairing as Pairing>::BaseField,
             TestSNARK,
         >>::ProofVar::new_witness(ns!(cs, "alloc_proof"), || Ok(proof))
         .unwrap();
         let vk_gadget = <TestSNARKGadget as SNARKGadget<
-            <MNT4PairingEngine as PairingEngine>::Fr,
-            <MNT4PairingEngine as PairingEngine>::Fq,
+            <MNT4Pairing as Pairing>::ScalarField,
+            <MNT4Pairing as Pairing>::BaseField,
             TestSNARK,
         >>::VerifyingKeyVar::new_constant(ns!(cs, "alloc_vk"), vk.clone())
         .unwrap();
         <TestSNARKGadget as SNARKGadget<
-            <MNT4PairingEngine as PairingEngine>::Fr,
-            <MNT4PairingEngine as PairingEngine>::Fq,
+            <MNT4Pairing as Pairing>::ScalarField,
+            <MNT4Pairing as Pairing>::BaseField,
             TestSNARK,
         >>::verify(&vk_gadget, &input_gadget, &proof_gadget)
         .unwrap()
@@ -592,8 +599,8 @@ mod test {
 
         let pvk = TestSNARK::process_vk(&vk).unwrap();
         let pvk_gadget = <TestSNARKGadget as SNARKGadget<
-            <MNT4PairingEngine as PairingEngine>::Fr,
-            <MNT4PairingEngine as PairingEngine>::Fq,
+            <MNT4Pairing as Pairing>::ScalarField,
+            <MNT4Pairing as Pairing>::BaseField,
             TestSNARK,
         >>::ProcessedVerifyingKeyVar::new_constant(
             ns!(cs, "alloc_pvk"), pvk.clone()

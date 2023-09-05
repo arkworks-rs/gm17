@@ -1,9 +1,10 @@
 // For benchmark, run:
-//     RAYON_NUM_THREADS=N cargo bench --no-default-features --features "std parallel" -- --nocapture
-// where N is the number of threads you want to use (N = 1 for single-thread).
+//     RAYON_NUM_THREADS=N cargo bench --no-default-features --features "std
+// parallel" -- --nocapture where N is the number of threads you want to use (N
+// = 1 for single-thread).
 
 use ark_bls12_381::{Bls12_381, Fr as BlsFr};
-use ark_crypto_primitives::SNARK;
+use ark_crypto_primitives::snark::SNARK;
 use ark_ff::PrimeField;
 use ark_gm17::GM17;
 use ark_mnt4_298::{Fr as MNT4Fr, MNT4_298};
@@ -14,8 +15,11 @@ use ark_relations::{
     lc,
     r1cs::{ConstraintSynthesizer, ConstraintSystemRef, SynthesisError},
 };
-use ark_std::ops::Mul;
-use ark_std::UniformRand;
+use ark_std::{
+    ops::Mul,
+    rand::{rngs, Rng, SeedableRng},
+    UniformRand,
+};
 
 const NUM_PROVE_REPEATITIONS: usize = 10;
 const NUM_VERIFY_REPEATITIONS: usize = 50;
@@ -66,20 +70,21 @@ impl<F: PrimeField> ConstraintSynthesizer<F> for DummyCircuit<F> {
 
 macro_rules! gm17_prove_bench {
     ($bench_name:ident, $bench_field:ty, $bench_pairing_engine:ty) => {
-        let rng = &mut ark_std::test_rng();
+        let mut _rng = ark_std::test_rng();
+        let mut rng = rngs::StdRng::from_seed(_rng.gen());
         let c = DummyCircuit::<$bench_field> {
-            a: Some(<$bench_field>::rand(rng)),
-            b: Some(<$bench_field>::rand(rng)),
+            a: Some(<$bench_field>::rand(&mut rng)),
+            b: Some(<$bench_field>::rand(&mut rng)),
             num_variables: 10,
             num_constraints: 65536,
         };
 
-        let (pk, _) = GM17::<$bench_pairing_engine>::circuit_specific_setup(c, rng).unwrap();
+        let (pk, _) = GM17::<$bench_pairing_engine>::circuit_specific_setup(c, &mut rng).unwrap();
 
         let start = ark_std::time::Instant::now();
 
         for _ in 0..NUM_PROVE_REPEATITIONS {
-            let _ = GM17::<$bench_pairing_engine>::prove(&pk, c.clone(), rng).unwrap();
+            let _ = GM17::<$bench_pairing_engine>::prove(&pk, c.clone(), &mut rng).unwrap();
         }
 
         println!(
@@ -92,16 +97,17 @@ macro_rules! gm17_prove_bench {
 
 macro_rules! gm17_verify_bench {
     ($bench_name:ident, $bench_field:ty, $bench_pairing_engine:ty) => {
-        let rng = &mut ark_std::test_rng();
+        let mut _rng = ark_std::test_rng();
+        let mut rng = rngs::StdRng::from_seed(_rng.gen());
         let c = DummyCircuit::<$bench_field> {
-            a: Some(<$bench_field>::rand(rng)),
-            b: Some(<$bench_field>::rand(rng)),
+            a: Some(<$bench_field>::rand(&mut rng)),
+            b: Some(<$bench_field>::rand(&mut rng)),
             num_variables: 10,
             num_constraints: 65536,
         };
 
-        let (pk, vk) = GM17::<$bench_pairing_engine>::circuit_specific_setup(c, rng).unwrap();
-        let proof = GM17::<$bench_pairing_engine>::prove(&pk, c.clone(), rng).unwrap();
+        let (pk, vk) = GM17::<$bench_pairing_engine>::circuit_specific_setup(c, &mut rng).unwrap();
+        let proof = GM17::<$bench_pairing_engine>::prove(&pk, c.clone(), &mut rng).unwrap();
 
         let v = c.a.unwrap().mul(c.b.unwrap());
 

@@ -2,14 +2,7 @@
 //!
 //! [`Groth-Maller`]: https://eprint.iacr.org/2017/540
 #![cfg_attr(not(feature = "std"), no_std)]
-#![deny(
-    warnings,
-    unused,
-    future_incompatible,
-    nonstandard_style,
-    rust_2018_idioms,
-    missing_docs
-)]
+#![deny(future_incompatible, nonstandard_style, rust_2018_idioms, missing_docs)]
 #![allow(clippy::many_single_char_names, clippy::op_ref)]
 #![forbid(unsafe_code)]
 
@@ -42,28 +35,29 @@ pub mod constraints;
 #[cfg(test)]
 mod test;
 
-pub use self::data_structures::*;
-pub use self::{generator::*, prover::*, verifier::*};
+pub use self::{data_structures::*, generator::*, prover::*, verifier::*};
 
 use ark_crypto_primitives::snark::{CircuitSpecificSetupSNARK, SNARK};
-use ark_ec::PairingEngine;
+use ark_ec::pairing::Pairing;
 use ark_relations::r1cs::{ConstraintSynthesizer, SynthesisError};
-use ark_std::marker::PhantomData;
-use ark_std::rand::RngCore;
+use ark_std::{
+    marker::PhantomData,
+    rand::{CryptoRng, RngCore},
+};
 
 /// The SNARK of [[GrothMaller17]](https://eprint.iacr.org/2017/540).
-pub struct GM17<E: PairingEngine> {
+pub struct GM17<E: Pairing> {
     e_phantom: PhantomData<E>,
 }
 
-impl<E: PairingEngine> SNARK<E::Fr> for GM17<E> {
+impl<E: Pairing> SNARK<E::ScalarField> for GM17<E> {
     type ProvingKey = ProvingKey<E>;
     type VerifyingKey = VerifyingKey<E>;
     type Proof = Proof<E>;
     type ProcessedVerifyingKey = PreparedVerifyingKey<E>;
     type Error = SynthesisError;
 
-    fn circuit_specific_setup<C: ConstraintSynthesizer<E::Fr>, R: RngCore>(
+    fn circuit_specific_setup<C: ConstraintSynthesizer<E::ScalarField>, R: RngCore + CryptoRng>(
         circuit: C,
         rng: &mut R,
     ) -> Result<(Self::ProvingKey, Self::VerifyingKey), Self::Error> {
@@ -73,7 +67,7 @@ impl<E: PairingEngine> SNARK<E::Fr> for GM17<E> {
         Ok((pk, vk))
     }
 
-    fn prove<C: ConstraintSynthesizer<E::Fr>, R: RngCore>(
+    fn prove<C: ConstraintSynthesizer<E::ScalarField>, R: RngCore + CryptoRng>(
         pk: &Self::ProvingKey,
         circuit: C,
         rng: &mut R,
@@ -89,11 +83,11 @@ impl<E: PairingEngine> SNARK<E::Fr> for GM17<E> {
 
     fn verify_with_processed_vk(
         circuit_pvk: &Self::ProcessedVerifyingKey,
-        x: &[E::Fr],
+        x: &[E::ScalarField],
         proof: &Self::Proof,
     ) -> Result<bool, Self::Error> {
         Ok(verify_proof(&circuit_pvk, proof, &x)?)
     }
 }
 
-impl<E: PairingEngine> CircuitSpecificSetupSNARK<E::Fr> for GM17<E> {}
+impl<E: Pairing> CircuitSpecificSetupSNARK<E::ScalarField> for GM17<E> {}
