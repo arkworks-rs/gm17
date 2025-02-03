@@ -7,7 +7,7 @@
     <a href="https://deps.rs/repo/github/arkworks-rs/gm17"><img src="https://deps.rs/repo/github/arkworks-rs/gm17/status.svg"></a>
 </p>
 
-The arkworks ecosystem consist of Rust libraries for designing and working with __zero knowledge succinct non-interactive arguments (zkSNARKs)__. This repository contains an efficient implementation of the zkSNARK of [Groth and Maller](https://eprint.iacr.org/2017/540).
+The arkworks ecosystem consist of Rust libraries for designing and working with __zero knowledge succinct non-interactive arguments (zkSNARKs)__. This repository contains an efficient implementation of the zkSNARK of [Growth and Maller](https://eprint.iacr.org/2017/540).
 
 This library is released under the MIT License and the Apache v2 License (see [License](#license)).
 
